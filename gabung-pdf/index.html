@@ -1,0 +1,202 @@
+<!DOCTYPE html><html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />  <title>Gabungkan PDF Online Gratis - Merge PDF Tanpa Aplikasi</title>  <meta name="description" content="Gabungkan beberapa file PDF menjadi satu secara gratis langsung di browser tanpa upload ke server. Merge PDF online cepat, aman, dan tanpa aplikasi." />  <meta name="robots" content="index, follow" />  <link rel="canonical" href="https://domainkamu.com/gabung-pdf/" />  <meta property="og:title" content="Gabungkan PDF Online Gratis" />
+  <meta property="og:description" content="Merge PDF online gratis langsung di browser tanpa aplikasi." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://domainkamu.com/gabung-pdf/" />  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      margin: 0;
+      padding: 0;
+      color: #222;
+    }
+
+    header {
+      background: white;
+      padding: 30px 20px;
+      text-align: center;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: auto;
+      padding: 20px;
+    }
+
+    .box {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+
+    input {
+      display: block;
+      margin: 10px 0;
+    }
+
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #0056b3;
+    }
+
+    #status {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #555;
+    }
+
+    .content {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
+
+    footer {
+      text-align: center;
+      padding: 30px;
+      font-size: 14px;
+      color: #777;
+    }
+
+    /* FLOATING BUTTON */
+    #donateBtn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #ffcc00;
+      border: none;
+      padding: 12px 16px;
+      border-radius: 50px;
+      cursor: pointer;
+      font-weight: bold;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      z-index: 1000;
+    }
+
+    /* MODAL */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 999;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+    }
+
+    .modal-content {
+      background: white;
+      max-width: 400px;
+      margin: 10% auto;
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+    }
+
+    .modal-content img {
+      width: 220px;
+      border-radius: 10px;
+    }
+  </style></head>
+<body><header>
+  <h1>Gabungkan PDF Online Gratis</h1>
+  <p>Gabungkan beberapa file PDF menjadi satu langsung di browser tanpa aplikasi</p>
+</header><div class="container">  <!-- TOOL -->  <div class="box">
+    <h2>Merge PDF</h2>
+    <p>Pilih minimal 2 file PDF untuk digabungkan</p>
+    <input type="file" id="pdfFiles" multiple accept="application/pdf" />
+    <button onclick="mergePDF()">Gabungkan PDF</button>
+    <p id="status"></p>
+  </div>  <!-- SEO CONTENT -->  <div class="content">
+    <h2>Apa itu Gabungkan PDF?</h2>
+    <p>
+      Gabungkan PDF online adalah proses menggabungkan beberapa file PDF menjadi satu dokumen langsung di browser tanpa aplikasi tambahan.
+    </p>
+    <p>
+      Tool ini sangat berguna untuk menggabungkan laporan, tugas, invoice, atau dokumen lain menjadi satu file PDF.
+    </p><h3>Cara menggunakan:</h3>
+<ol>
+  <li>Pilih file PDF</li>
+  <li>Klik tombol Gabungkan PDF</li>
+  <li>Tunggu proses selesai</li>
+  <li>Download hasil</li>
+</ol>
+
+  </div></div><footer>
+  © 2026 Tools Online Gratis
+</footer><!-- FLOATING BUTTON --><button id="donateBtn" onclick="openDonate()">Dukung Kami ☕</button>
+
+<!-- MODAL --><div id="donateModal" class="modal">
+  <div class="modal-content">
+    <h2>Dukung Kami ☕</h2>
+    <p>
+      Website ini gratis digunakan. Dukungan kamu membantu kami terus mengembangkan tools ini.
+    </p>
+    <p style="font-size:14px;color:#666;">
+      Scan QRIS di bawah untuk donasi ❤️
+    </p><img src="qris.png" alt="QRIS Donasi" />
+
+<br><br>
+<button onclick="closeDonate()">Tutup</button>
+
+  </div>
+</div><!-- PDF LIB --><script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script><script>
+async function mergePDF() {
+  const input = document.getElementById('pdfFiles');
+  const status = document.getElementById('status');
+
+  if (input.files.length < 2) {
+    status.innerText = "Pilih minimal 2 file PDF";
+    return;
+  }
+
+  status.innerText = "Menggabungkan PDF...";
+
+  const { PDFDocument } = PDFLib;
+  const mergedPdf = await PDFDocument.create();
+
+  for (const file of input.files) {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await PDFDocument.load(arrayBuffer);
+    const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+    copiedPages.forEach(page => mergedPdf.addPage(page));
+  }
+
+  const pdfBytes = await mergedPdf.save();
+
+  const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'gabungan.pdf';
+  a.click();
+
+  status.innerText = "Selesai! File berhasil diunduh.";
+}
+
+function openDonate() {
+  document.getElementById("donateModal").style.display = "block";
+}
+
+function closeDonate() {
+  document.getElementById("donateModal").style.display = "none";
+}
+</script></body>
+</html>
+
