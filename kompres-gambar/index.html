@@ -1,0 +1,102 @@
+<!DOCTYPE html><html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kompres Gambar Online Gratis</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin:0; background:#f5f5f5; }
+    header { background:#111; color:#fff; padding:16px; text-align:center; }
+    .container { max-width:800px; margin:auto; padding:20px; }
+    .card { background:#fff; padding:16px; border-radius:10px; margin-bottom:16px; }
+    input, select { width:100%; padding:10px; margin:10px 0; }
+    button { padding:10px 14px; border:none; background:#111; color:#fff; border-radius:6px; cursor:pointer; }
+    button:hover { background:#333; }
+    .result { margin-top:10px; font-weight:bold; }
+    img.preview { max-width:100%; margin-top:10px; border-radius:10px; }
+    footer { text-align:center; padding:20px; font-size:12px; color:#666; }
+  </style>
+</head>
+<body><header>
+  <h1>Kompres Gambar Online Gratis</h1>
+  <p>Kompres JPEG, PNG, WebP langsung di browser (pakai CDN library)</p>
+</header><div class="container">  <div class="card">
+    <h2>Upload Gambar</h2><input type="file" id="imgInput" accept="image/*" />
+
+<label>Quality (0 - 1)</label>
+<input type="range" id="quality" min="0.1" max="1" step="0.1" value="0.7" />
+
+<label>Max Width (resize otomatis)</label>
+<input type="number" id="maxWidth" value="1200" />
+
+<button onclick="estimateImage()">Estimasi Ukuran</button>
+<button onclick="compressImage()">Kompres Gambar</button>
+
+<div class="result" id="estimateResult"></div>
+<div class="result" id="compressResult"></div>
+
+<img id="preview" class="preview" />
+
+  </div>  <div class="card">
+    <h3>Cara kerja</h3>
+    <p>Tool ini menggunakan library CDN <b>browser-image-compression</b> untuk kompresi lebih optimal dibanding canvas biasa.</p>
+  </div>  <footer>
+    © 2026 Tools Online Gratis
+  </footer></div><!-- CDN LIBRARY --><script src="https://cdn.jsdelivr.net/npm/browser-image-compression@latest/dist/browser-image-compression.js"></script><script>
+let originalSize = 0;
+let fileObj = null;
+
+function formatBytes(bytes) {
+  return (bytes / 1024).toFixed(2) + " KB";
+}
+
+function estimateImage() {
+  const file = document.getElementById('imgInput').files[0];
+  if (!file) return alert("Pilih gambar dulu");
+
+  originalSize = file.size;
+  const quality = parseFloat(document.getElementById('quality').value);
+
+  // estimasi sederhana berbasis quality
+  const estimated = originalSize * quality;
+
+  document.getElementById('estimateResult').innerText =
+    `Estimasi ukuran: ${formatBytes(estimated)} dari ${formatBytes(originalSize)}`;
+}
+
+async function compressImage() {
+  const file = document.getElementById('imgInput').files[0];
+  if (!file) return alert("Pilih gambar dulu");
+
+  const quality = parseFloat(document.getElementById('quality').value);
+  const maxWidth = parseInt(document.getElementById('maxWidth').value);
+
+  const options = {
+    maxSizeMB: 1,
+    maxWidthOrHeight: maxWidth,
+    useWebWorker: true,
+    initialQuality: quality
+  };
+
+  try {
+    const compressedFile = await imageCompression(file, options);
+
+    const url = URL.createObjectURL(compressedFile);
+
+    document.getElementById('preview').src = url;
+
+    document.getElementById('compressResult').innerText =
+      `Hasil: ${formatBytes(compressedFile.size)} dari ${formatBytes(file.size)}`;
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = "compressed-image.jpg";
+    a.click();
+
+  } catch (err) {
+    console.error(err);
+    alert("Gagal kompres gambar");
+  }
+}
+</script></body>
+</html>
+
