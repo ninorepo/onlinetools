@@ -1,102 +1,392 @@
-<!DOCTYPE html><html lang="id">
+<!DOCTYPE html>
+<html lang="id">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Kompres Gambar Online Gratis</title>
+
+  <title>Kompres Gambar Online Gratis - Resize & Compress Foto</title>
+
+  <meta name="description"
+    content="Kompres gambar JPG, PNG, dan WebP langsung di browser tanpa upload ke server. Gratis, aman, tanpa watermark." />
+
+  <meta name="robots" content="index, follow" />
+
   <style>
-    body { font-family: Arial, sans-serif; margin:0; background:#f5f5f5; }
-    header { background:#111; color:#fff; padding:16px; text-align:center; }
-    .container { max-width:800px; margin:auto; padding:20px; }
-    .card { background:#fff; padding:16px; border-radius:10px; margin-bottom:16px; }
-    input, select { width:100%; padding:10px; margin:10px 0; }
-    button { padding:10px 14px; border:none; background:#111; color:#fff; border-radius:6px; cursor:pointer; }
-    button:hover { background:#333; }
-    .result { margin-top:10px; font-weight:bold; }
-    img.preview { max-width:100%; margin-top:10px; border-radius:10px; }
-    footer { text-align:center; padding:20px; font-size:12px; color:#666; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      margin: 0;
+      padding: 0;
+      color: #222;
+    }
+
+    header {
+      background: white;
+      padding: 30px 20px;
+      text-align: center;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: auto;
+      padding: 20px;
+    }
+
+    .box,
+    .content {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+    }
+
+    input[type="file"],
+    input[type="number"],
+    input[type="range"] {
+      width: 100%;
+      margin: 10px 0;
+    }
+
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 12px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 10px;
+      width: 100%;
+    }
+
+    button:hover {
+      background: #0056b3;
+    }
+
+    .info {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #555;
+      line-height: 1.6;
+    }
+
+    .preview {
+      max-width: 100%;
+      margin-top: 15px;
+      border-radius: 10px;
+    }
+
+    footer {
+      text-align: center;
+      padding: 30px;
+      font-size: 14px;
+      color: #777;
+    }
+
+    .slider-value {
+      font-weight: bold;
+      color: #007bff;
+    }
+
+    /* DONATE BUTTON */
+
+    #donateBtn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #ffcc00;
+      border: none;
+      padding: 12px 16px;
+      border-radius: 50px;
+      cursor: pointer;
+      font-weight: bold;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      z-index: 1000;
+    }
+
+    /* MODAL */
+
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 999;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+    }
+
+    .modal-content {
+      background: white;
+      max-width: 400px;
+      margin: 10% auto;
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+    }
+
+    .modal-content img {
+      width: 220px;
+      border-radius: 10px;
+    }
   </style>
 </head>
-<body><header>
+
+<body>
+
+<header>
   <h1>Kompres Gambar Online Gratis</h1>
-  <p>Kompres JPEG, PNG, WebP langsung di browser (pakai CDN library)</p>
-</header><div class="container">  <div class="card">
-    <h2>Upload Gambar</h2><input type="file" id="imgInput" accept="image/*" />
+  <p>Kompres JPG, PNG, dan WebP langsung di browser tanpa upload ke server</p>
+</header>
 
-<label>Quality (0 - 1)</label>
-<input type="range" id="quality" min="0.1" max="1" step="0.1" value="0.7" />
+<div class="container">
 
-<label>Max Width (resize otomatis)</label>
-<input type="number" id="maxWidth" value="1200" />
+  <!-- TOOL -->
 
-<button onclick="estimateImage()">Estimasi Ukuran</button>
-<button onclick="compressImage()">Kompres Gambar</button>
+  <div class="box">
 
-<div class="result" id="estimateResult"></div>
-<div class="result" id="compressResult"></div>
+    <h2>Kompres Gambar</h2>
 
-<img id="preview" class="preview" />
+    <input type="file" id="imgInput" accept="image/*" />
 
-  </div>  <div class="card">
-    <h3>Cara kerja</h3>
-    <p>Tool ini menggunakan library CDN <b>browser-image-compression</b> untuk kompresi lebih optimal dibanding canvas biasa.</p>
-  </div>  <footer>
-    © 2026 Tools Online Gratis
-  </footer></div><!-- CDN LIBRARY --><script src="https://cdn.jsdelivr.net/npm/browser-image-compression@latest/dist/browser-image-compression.js"></script><script>
-let originalSize = 0;
-let fileObj = null;
+    <label>
+      Quality:
+      <span class="slider-value" id="qualityValue">70%</span>
+    </label>
+
+    <input
+      type="range"
+      id="quality"
+      min="10"
+      max="100"
+      step="5"
+      value="70"
+    />
+
+    <label>Max Width</label>
+
+    <input type="number" id="maxWidth" value="1200" />
+
+    <div class="info">
+      <div>Width: <span id="imgWidth">-</span></div>
+      <div>Height: <span id="imgHeight">-</span></div>
+      <div>Ukuran asli: <span id="originalSize">-</span></div>
+      <div>Estimasi ukuran: <span id="estimatedSize">-</span></div>
+    </div>
+
+    <button onclick="compressImage()">
+      Kompres & Download
+    </button>
+
+    <div class="info" id="compressResult"></div>
+
+    <img id="preview" class="preview" />
+
+  </div>
+
+  <!-- CONTENT -->
+
+  <div class="content">
+
+    <h2>Apa itu Kompres Gambar?</h2>
+
+    <p>
+      Kompres gambar online adalah proses mengecilkan ukuran file gambar
+      tanpa perlu menginstall aplikasi tambahan.
+    </p>
+
+    <p>
+      Tool ini bekerja langsung di browser sehingga gambar tidak diupload ke server.
+      Lebih aman, cepat, dan gratis digunakan.
+    </p>
+
+    <h3>Cara menggunakan:</h3>
+
+    <ol>
+      <li>Upload gambar JPG, PNG, atau WebP</li>
+      <li>Atur kualitas kompresi</li>
+      <li>Atur ukuran lebar maksimal jika diperlukan</li>
+      <li>Klik tombol Kompres & Download</li>
+      <li>File otomatis terdownload</li>
+    </ol>
+
+  </div>
+
+</div>
+
+<footer>
+  © 2026 Tools Online Gratis
+</footer>
+
+<!-- DONATE BUTTON -->
+
+<button id="donateBtn" onclick="openDonate()">
+  Dukung Kami ☕
+</button>
+
+<!-- MODAL -->
+
+<div id="donateModal" class="modal">
+  <div class="modal-content">
+
+    <h2>Dukung Kami ☕</h2>
+
+    <p>
+      Website ini gratis digunakan. Dukungan kamu membantu kami terus
+      mengembangkan tools gratis lainnya ❤️
+    </p>
+
+    <p style="font-size:14px;color:#666;">
+      Scan QRIS berikut untuk donasi
+    </p>
+
+    <img src="qris.png" alt="QRIS Donasi" />
+
+    <br><br>
+
+    <button onclick="closeDonate()">
+      Tutup
+    </button>
+
+  </div>
+</div>
+
+<!-- CDN -->
+
+<script src="https://cdn.jsdelivr.net/npm/browser-image-compression@latest/dist/browser-image-compression.js"></script>
+
+<script>
+
+const imgInput = document.getElementById('imgInput');
+const qualitySlider = document.getElementById('quality');
+
+let currentFile = null;
 
 function formatBytes(bytes) {
-  return (bytes / 1024).toFixed(2) + " KB";
+
+  if (bytes < 1024) return bytes + ' B';
+
+  if (bytes < 1024 * 1024)
+    return (bytes / 1024).toFixed(2) + ' KB';
+
+  return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
 }
 
-function estimateImage() {
-  const file = document.getElementById('imgInput').files[0];
-  if (!file) return alert("Pilih gambar dulu");
+/* REALTIME QUALITY */
 
-  originalSize = file.size;
-  const quality = parseFloat(document.getElementById('quality').value);
+qualitySlider.addEventListener('input', updateRealtimeInfo);
 
-  // estimasi sederhana berbasis quality
-  const estimated = originalSize * quality;
+imgInput.addEventListener('change', async () => {
 
-  document.getElementById('estimateResult').innerText =
-    `Estimasi ukuran: ${formatBytes(estimated)} dari ${formatBytes(originalSize)}`;
+  currentFile = imgInput.files[0];
+
+  if (!currentFile) return;
+
+  document.getElementById('originalSize').innerText =
+    formatBytes(currentFile.size);
+
+  const img = new Image();
+
+  img.onload = function () {
+
+    document.getElementById('imgWidth').innerText =
+      img.width + ' px';
+
+    document.getElementById('imgHeight').innerText =
+      img.height + ' px';
+  };
+
+  img.src = URL.createObjectURL(currentFile);
+
+  updateRealtimeInfo();
+});
+
+function updateRealtimeInfo() {
+
+  const quality = qualitySlider.value;
+
+  document.getElementById('qualityValue').innerText =
+    quality + '%';
+
+  if (!currentFile) return;
+
+  /* estimasi sederhana */
+
+  const estimated =
+    currentFile.size * (quality / 100);
+
+  document.getElementById('estimatedSize').innerText =
+    formatBytes(estimated);
 }
 
 async function compressImage() {
-  const file = document.getElementById('imgInput').files[0];
-  if (!file) return alert("Pilih gambar dulu");
 
-  const quality = parseFloat(document.getElementById('quality').value);
-  const maxWidth = parseInt(document.getElementById('maxWidth').value);
+  const file = imgInput.files[0];
+
+  if (!file) {
+    alert('Pilih gambar terlebih dahulu');
+    return;
+  }
+
+  const quality =
+    parseInt(qualitySlider.value) / 100;
+
+  const maxWidth =
+    parseInt(document.getElementById('maxWidth').value);
 
   const options = {
-    maxSizeMB: 1,
+    maxSizeMB: 5,
     maxWidthOrHeight: maxWidth,
     useWebWorker: true,
     initialQuality: quality
   };
 
   try {
-    const compressedFile = await imageCompression(file, options);
 
-    const url = URL.createObjectURL(compressedFile);
+    document.getElementById('compressResult').innerText =
+      'Mengompres gambar...';
+
+    const compressedFile =
+      await imageCompression(file, options);
+
+    const url =
+      URL.createObjectURL(compressedFile);
 
     document.getElementById('preview').src = url;
 
     document.getElementById('compressResult').innerText =
-      `Hasil: ${formatBytes(compressedFile.size)} dari ${formatBytes(file.size)}`;
+      `Berhasil dikompres: ${formatBytes(compressedFile.size)}
+       dari ${formatBytes(file.size)}`;
 
     const a = document.createElement('a');
+
     a.href = url;
-    a.download = "compressed-image.jpg";
+
+    a.download = 'compressed-image.jpg';
+
     a.click();
 
   } catch (err) {
+
     console.error(err);
-    alert("Gagal kompres gambar");
+
+    alert('Gagal mengompres gambar');
   }
 }
-</script></body>
+
+/* DONATE */
+
+function openDonate() {
+  document.getElementById("donateModal").style.display = "block";
+}
+
+function closeDonate() {
+  document.getElementById("donateModal").style.display = "none";
+}
+
+</script>
+
+</body>
 </html>
 
