@@ -1,181 +1,430 @@
-<!DOCTYPE html><html lang="id">
+<!DOCTYPE html>
+<html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="../asset/css/donate.css">
-  <title>Split PDF Online Gratis</title>
-  <style>
-    body { font-family: Arial; margin:0; background:#f5f5f5; }
-    header { background:#111; color:#fff; padding:16px; text-align:center; }
-    .container { max-width:900px; margin:auto; padding:20px; }
-    .card { background:#fff; padding:16px; border-radius:10px; margin-bottom:16px; }
-    input, button { width:100%; padding:10px; margin:8px 0; }
-    button { background:#111; color:#fff; border:none; border-radius:6px; cursor:pointer; }
-    button:hover { background:#333; }
-    .pages { display:flex; flex-wrap:wrap; gap:8px; }
-    .page { border:1px solid #ddd; padding:6px; border-radius:6px; width:80px; text-align:center; cursor:pointer; background:#fafafa; }
-    .page.selected { background:#111; color:#fff; }
-    canvas { width:80px; height:auto; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Split PDF Online Gratis</title>
+
+<meta name="description" content="Pisahkan halaman PDF online gratis langsung di browser.">
+<meta name="keywords" content="split pdf,pisahkan pdf,pdf splitter">
+<meta name="robots" content="index,follow">
+
+<style>
+
+*{
+  box-sizing:border-box;
+  font-family:Arial,sans-serif;
+}
+
+body{
+  margin:0;
+  background:#f5f5f5;
+  color:#222;
+}
+
+.container{
+  max-width:1100px;
+  margin:auto;
+  padding:20px;
+}
+
+h1{
+  text-align:center;
+}
+
+.desc{
+  text-align:center;
+  color:#555;
+  margin-bottom:20px;
+}
+
+.upload-box{
+  background:#fff;
+  border:2px dashed #bbb;
+  border-radius:10px;
+  padding:25px;
+  margin-bottom:20px;
+}
+
+input[type=file]{
+  width:100%;
+}
+
+.controls{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-bottom:20px;
+}
+
+button{
+  padding:12px 16px;
+  border:none;
+  border-radius:8px;
+  background:#222;
+  color:#fff;
+  cursor:pointer;
+}
+
+button:hover{
+  opacity:0.9;
+}
+
+.range-box{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  width:100%;
+}
+
+.range-box input{
+  flex:1;
+  min-width:200px;
+  padding:10px;
+  border-radius:8px;
+  border:1px solid #ccc;
+}
+
+.preview-container{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+  gap:20px;
+}
+
+.page-card{
+  background:#fff;
+  border-radius:10px;
+  padding:10px;
+  text-align:center;
+  box-shadow:0 2px 6px rgba(0,0,0,0.1);
+}
+
+.page-card canvas{
+  width:100%;
+  border:1px solid #ddd;
+  border-radius:6px;
+}
+
+.loading{
+  text-align:center;
+  margin:20px 0;
+  font-weight:bold;
+}
+
+@media(max-width:600px){
+
+  .controls{
+    flex-direction:column;
+  }
+
+  button{
+    width:100%;
+  }
+}
+
+</style>
 </head>
 <body>
-	<header>
-  		<h1>Split PDF Online Gratis</h1>
-  			<p>Split, extract, range & download PDF langsung di browser</p>
-	</header>
-	<div class="container">  
-		<div class="card">
-    			<h3>Upload PDF</h3>
-    				<input type="file" id="pdfFile" accept="application/pdf" />
-    				<button onclick="loadPDF()">Load PDF</button>
-  		</div>  
-		<div class="card">
-    			<h3>Preview Pages</h3>
-    			<div class="pages" id="pages"></div>
-  		</div>  
-		<div class="card">
-    			<h3>Range Split</h3>
-    			<input id="range" placeholder="contoh: 1-3,5,7-9" />
-    			<button onclick="splitRange()">Split Range</button>
-  		</div>  
-		<div class="card">
-    			<button onclick="splitAll()">Split All Pages</button>
-    			<button onclick="extractSelected()">Extract Selected Pages</button>
-  		</div>
-	</div>
-	<footer></footer>
-	<div id="donation-popup"></div>
-  <!-- PDF LIB -->
-  <script src="https://cdn.jsdelivr.net/npm/pdf-lib/dist/pdf-lib.min.js"></script>
-  <!-- PDF RENDER -->
-  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
-  <!-- ZIP -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  <script src="../asset/js/donate.js"></script>
-  <script src="../asset/js/include.js"></script>
 
-  <script>
-let pdfDoc;
-let pdfBytes;
-let selectedPages = new Set();
+<div class="container">
 
-async function loadPDF() {
-  const file = document.getElementById('pdfFile').files[0];
-  if (!file) return alert("Pilih file PDF");
+<h1>Split PDF Online Gratis</h1>
+
+<p class="desc">
+Pisahkan halaman PDF langsung di browser tanpa upload server
+</p>
+
+<div class="upload-box">
+  <input type="file" id="pdfInput" accept="application/pdf">
+</div>
+
+<div class="controls">
+
+  <button id="downloadSelected">
+    Download Halaman Terpilih
+  </button>
+
+  <button id="downloadAll">
+    Pisahkan Semua Halaman
+  </button>
+
+  <div class="range-box">
+
+    <input
+      type="text"
+      id="rangeInput"
+      placeholder="Contoh: 1-3,5,6-7"
+    >
+
+    <button id="downloadRange">
+      Pisah Dengan Range
+    </button>
+
+  </div>
+
+</div>
+
+<div class="loading" id="loading"></div>
+
+<div class="preview-container" id="previewContainer"></div>
+
+</div>
+
+<!-- PDF.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+
+<!-- PDF-LIB -->
+<script src="https://cdn.jsdelivr.net/npm/pdf-lib/dist/pdf-lib.min.js"></script>
+
+<script>
+
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
+const pdfInput = document.getElementById('pdfInput');
+const previewContainer = document.getElementById('previewContainer');
+const loading = document.getElementById('loading');
+
+let pdfBytes = null;
+let pdfDoc = null;
+
+pdfInput.addEventListener('change', async function(e){
+
+  const file = e.target.files[0];
+
+  if(!file) return;
+
+  loading.innerText = 'Memuat PDF...';
+  previewContainer.innerHTML = '';
 
   pdfBytes = await file.arrayBuffer();
-  pdfDoc = await pdfjsLib.getDocument({data: pdfBytes}).promise;
 
-  renderPages();
-}
+  try{
 
-async function renderPages() {
-  const container = document.getElementById('pages');
-  container.innerHTML = '';
-  selectedPages.clear();
+    pdfDoc = await pdfjsLib.getDocument({
+      data: pdfBytes
+    }).promise;
 
-  for (let i = 1; i <= pdfDoc.numPages; i++) {
-    const page = await pdfDoc.getPage(i);
-    const viewport = page.getViewport({ scale: 0.2 });
+    for(let i=1;i<=pdfDoc.numPages;i++){
 
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
+      const page = await pdfDoc.getPage(i);
 
-    await page.render({ canvasContext: ctx, viewport }).promise;
+      const viewport = page.getViewport({
+        scale:1
+      });
 
-    const div = document.createElement('div');
-    div.className = 'page';
-    div.onclick = () => togglePage(i, div);
+      const canvas = document.createElement('canvas');
 
-    div.innerHTML = `<div>${i}</div>`;
-    div.appendChild(canvas);
+      const context = canvas.getContext('2d');
 
-    container.appendChild(div);
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+
+      await page.render({
+        canvasContext:context,
+        viewport:viewport
+      }).promise;
+
+      const card = document.createElement('div');
+
+      card.className = 'page-card';
+
+      card.innerHTML = `
+        <label>
+          <input type="checkbox" value="${i}">
+          Halaman ${i}
+        </label>
+      `;
+
+      card.prepend(canvas);
+
+      previewContainer.appendChild(card);
+    }
+
+    loading.innerText = '';
+
+  }catch(err){
+
+    console.error(err);
+
+    loading.innerText = 'Gagal membuka PDF';
   }
+
+});
+
+function downloadBlob(bytes, filename){
+
+  const blob = new Blob([bytes], {
+    type:'application/pdf'
+  });
+
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement('a');
+
+  a.href = url;
+  a.download = filename;
+
+  document.body.appendChild(a);
+
+  a.click();
+
+  a.remove();
+
+  setTimeout(()=>{
+    URL.revokeObjectURL(url);
+  },1000);
 }
 
-function togglePage(i, el) {
-  if (selectedPages.has(i)) {
-    selectedPages.delete(i);
-    el.classList.remove('selected');
-  } else {
-    selectedPages.add(i);
-    el.classList.add('selected');
-  }
-}
+async function createPdf(pageIndexes, filename){
 
-async function splitAll() {
-  const { PDFDocument } = PDFLib;
-  const src = await PDFDocument.load(pdfBytes);
-  const zip = new JSZip();
+  const srcPdf = await PDFLib.PDFDocument.load(pdfBytes);
 
-  for (let i = 0; i < src.getPageCount(); i++) {
-    const newPdf = await PDFDocument.create();
-    const [page] = await newPdf.copyPages(src, [i]);
+  const newPdf = await PDFLib.PDFDocument.create();
+
+  const copiedPages = await newPdf.copyPages(
+    srcPdf,
+    pageIndexes
+  );
+
+  copiedPages.forEach(page=>{
     newPdf.addPage(page);
-
-    const bytes = await newPdf.save();
-    zip.file(`page_${i+1}.pdf`, bytes);
-  }
-
-  const blob = await zip.generateAsync({type:"blob"});
-  download(blob, "split_all.zip");
-}
-
-async function extractSelected() {
-  const { PDFDocument } = PDFLib;
-  const src = await PDFDocument.load(pdfBytes);
-  const newPdf = await PDFDocument.create();
-
-  const pages = Array.from(selectedPages).map(i => i-1);
-  const copied = await newPdf.copyPages(src, pages);
-
-  copied.forEach(p => newPdf.addPage(p));
+  });
 
   const bytes = await newPdf.save();
-  download(new Blob([bytes]), "extracted.pdf");
+
+  downloadBlob(bytes, filename);
 }
 
-async function splitRange() {
-  const { PDFDocument } = PDFLib;
-  const src = await PDFDocument.load(pdfBytes);
-  const zip = new JSZip();
+function getSelectedPages(){
 
-  const input = document.getElementById('range').value;
-  const parts = input.split(',');
+  const checked = document.querySelectorAll(
+    '.page-card input:checked'
+  );
 
-  for (let part of parts) {
-    let [start, end] = part.split('-').map(n => parseInt(n));
-    if (!end) end = start;
+  return [...checked].map(cb=>{
+    return parseInt(cb.value)-1;
+  });
+}
 
-    const newPdf = await PDFDocument.create();
-    const indexes = [];
+document.getElementById('downloadSelected')
+.addEventListener('click', async ()=>{
 
-    for (let i = start-1; i <= end-1; i++) indexes.push(i);
-
-    const copied = await newPdf.copyPages(src, indexes);
-    copied.forEach(p => newPdf.addPage(p));
-
-    const bytes = await newPdf.save();
-    zip.file(`pages_${start}_${end}.pdf`, bytes);
+  if(!pdfBytes){
+    alert('Pilih PDF terlebih dahulu');
+    return;
   }
 
-  const blob = await zip.generateAsync({type:"blob"});
-  download(blob, "split_range.zip");
+  const pages = getSelectedPages();
+
+  if(!pages.length){
+    alert('Pilih halaman');
+    return;
+  }
+
+  for(let i=0;i<pages.length;i++){
+
+    await createPdf(
+      [pages[i]],
+      'halaman-'+(pages[i]+1)+'.pdf'
+    );
+  }
+
+});
+
+document.getElementById('downloadAll')
+.addEventListener('click', async ()=>{
+
+  if(!pdfDoc){
+    alert('Pilih PDF terlebih dahulu');
+    return;
+  }
+
+  for(let i=0;i<pdfDoc.numPages;i++){
+
+    await createPdf(
+      [i],
+      'halaman-'+(i+1)+'.pdf'
+    );
+  }
+
+});
+
+function parseRanges(text){
+
+  const result = [];
+
+  const parts = text.split(',');
+
+  parts.forEach(part=>{
+
+    part = part.trim();
+
+    if(part.includes('-')){
+
+      const range = part.split('-');
+
+      const start = parseInt(range[0]);
+      const end = parseInt(range[1]);
+
+      const arr = [];
+
+      for(let i=start;i<=end;i++){
+        arr.push(i-1);
+      }
+
+      result.push(arr);
+
+    }else{
+
+      result.push([
+        parseInt(part)-1
+      ]);
+
+    }
+
+  });
+
+  return result;
 }
 
-function download(blob, name) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = name;
-  a.click();
-}
+document.getElementById('downloadRange')
+.addEventListener('click', async ()=>{
 
-include("donate.html", "#donation-popup");
+  if(!pdfBytes){
+    alert('Pilih PDF terlebih dahulu');
+    return;
+  }
+
+  const text =
+    document.getElementById('rangeInput')
+    .value
+    .trim();
+
+  if(!text){
+    alert('Masukkan range');
+    return;
+  }
+
+  const groups = parseRanges(text);
+
+  for(let i=0;i<groups.length;i++){
+
+    const label = groups[i]
+      .map(v=>v+1)
+      .join('-');
+
+    await createPdf(
+      groups[i],
+      'split-'+label+'.pdf'
+    );
+  }
+
+});
+
 </script>
+
 </body>
 </html>
 
