@@ -1,0 +1,158 @@
+<!DOCTYPE html><html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Split PDF Online Gratis</title>
+  <style>
+    body { font-family: Arial; margin:0; background:#f5f5f5; }
+    header { background:#111; color:#fff; padding:16px; text-align:center; }
+    .container { max-width:900px; margin:auto; padding:20px; }
+    .card { background:#fff; padding:16px; border-radius:10px; margin-bottom:16px; }
+    input, button { width:100%; padding:10px; margin:8px 0; }
+    button { background:#111; color:#fff; border:none; border-radius:6px; cursor:pointer; }
+    button:hover { background:#333; }
+    .pages { display:flex; flex-wrap:wrap; gap:8px; }
+    .page { border:1px solid #ddd; padding:6px; border-radius:6px; width:80px; text-align:center; cursor:pointer; background:#fafafa; }
+    .page.selected { background:#111; color:#fff; }
+    canvas { width:80px; height:auto; }
+  </style>
+</head>
+<body><header>
+  <h1>Split PDF Online Gratis</h1>
+  <p>Split, extract, range & download PDF langsung di browser</p>
+</header><div class="container">  <div class="card">
+    <h3>Upload PDF</h3>
+    <input type="file" id="pdfFile" accept="application/pdf" />
+    <button onclick="loadPDF()">Load PDF</button>
+  </div>  <div class="card">
+    <h3>Preview Pages</h3>
+    <div class="pages" id="pages"></div>
+  </div>  <div class="card">
+    <h3>Range Split</h3>
+    <input id="range" placeholder="contoh: 1-3,5,7-9" />
+    <button onclick="splitRange()">Split Range</button>
+  </div>  <div class="card">
+    <button onclick="splitAll()">Split All Pages</button>
+    <button onclick="extractSelected()">Extract Selected Pages</button>
+  </div></div><!-- PDF LIB --><script src="https://cdn.jsdelivr.net/npm/pdf-lib/dist/pdf-lib.min.js"></script><!-- PDF RENDER --><script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script><!-- ZIP --><script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script><script>
+let pdfDoc;
+let pdfBytes;
+let selectedPages = new Set();
+
+async function loadPDF() {
+  const file = document.getElementById('pdfFile').files[0];
+  if (!file) return alert("Pilih file PDF");
+
+  pdfBytes = await file.arrayBuffer();
+  pdfDoc = await pdfjsLib.getDocument({data: pdfBytes}).promise;
+
+  renderPages();
+}
+
+async function renderPages() {
+  const container = document.getElementById('pages');
+  container.innerHTML = '';
+  selectedPages.clear();
+
+  for (let i = 1; i <= pdfDoc.numPages; i++) {
+    const page = await pdfDoc.getPage(i);
+    const viewport = page.getViewport({ scale: 0.2 });
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+
+    await page.render({ canvasContext: ctx, viewport }).promise;
+
+    const div = document.createElement('div');
+    div.className = 'page';
+    div.onclick = () => togglePage(i, div);
+
+    div.innerHTML = `<div>${i}</div>`;
+    div.appendChild(canvas);
+
+    container.appendChild(div);
+  }
+}
+
+function togglePage(i, el) {
+  if (selectedPages.has(i)) {
+    selectedPages.delete(i);
+    el.classList.remove('selected');
+  } else {
+    selectedPages.add(i);
+    el.classList.add('selected');
+  }
+}
+
+async function splitAll() {
+  const { PDFDocument } = PDFLib;
+  const src = await PDFDocument.load(pdfBytes);
+  const zip = new JSZip();
+
+  for (let i = 0; i < src.getPageCount(); i++) {
+    const newPdf = await PDFDocument.create();
+    const [page] = await newPdf.copyPages(src, [i]);
+    newPdf.addPage(page);
+
+    const bytes = await newPdf.save();
+    zip.file(`page_${i+1}.pdf`, bytes);
+  }
+
+  const blob = await zip.generateAsync({type:"blob"});
+  download(blob, "split_all.zip");
+}
+
+async function extractSelected() {
+  const { PDFDocument } = PDFLib;
+  const src = await PDFDocument.load(pdfBytes);
+  const newPdf = await PDFDocument.create();
+
+  const pages = Array.from(selectedPages).map(i => i-1);
+  const copied = await newPdf.copyPages(src, pages);
+
+  copied.forEach(p => newPdf.addPage(p));
+
+  const bytes = await newPdf.save();
+  download(new Blob([bytes]), "extracted.pdf");
+}
+
+async function splitRange() {
+  const { PDFDocument } = PDFLib;
+  const src = await PDFDocument.load(pdfBytes);
+  const zip = new JSZip();
+
+  const input = document.getElementById('range').value;
+  const parts = input.split(',');
+
+  for (let part of parts) {
+    let [start, end] = part.split('-').map(n => parseInt(n));
+    if (!end) end = start;
+
+    const newPdf = await PDFDocument.create();
+    const indexes = [];
+
+    for (let i = start-1; i <= end-1; i++) indexes.push(i);
+
+    const copied = await newPdf.copyPages(src, indexes);
+    copied.forEach(p => newPdf.addPage(p));
+
+    const bytes = await newPdf.save();
+    zip.file(`pages_${start}_${end}.pdf`, bytes);
+  }
+
+  const blob = await zip.generateAsync({type:"blob"});
+  download(blob, "split_range.zip");
+}
+
+function download(blob, name) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  a.click();
+}
+</script></body>
+</html>
+
