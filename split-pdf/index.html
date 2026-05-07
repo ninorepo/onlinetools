@@ -9,7 +9,7 @@
 <meta name="description" content="Pisahkan halaman PDF online gratis langsung di browser.">
 <meta name="keywords" content="split pdf,pisahkan pdf,pdf splitter">
 <meta name="robots" content="index,follow">
-
+<link rel="stylesheet" href="../asset/css/donate.css">
 <style>
 
 *{
@@ -170,13 +170,16 @@ Pisahkan halaman PDF langsung di browser tanpa upload server
 <div class="preview-container" id="previewContainer"></div>
 
 </div>
+<footer></footer>
+<div id="donation-popup"></div>
 
 <!-- PDF.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 
 <!-- PDF-LIB -->
 <script src="https://cdn.jsdelivr.net/npm/pdf-lib/dist/pdf-lib.min.js"></script>
-
+<script src="../asset/js/include.js"></script>
+<script src="../asset/js/donate.js"></script>
 <script>
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
@@ -423,6 +426,7 @@ document.getElementById('downloadRange')
 
 });
 
+include("donate.html", "#donation-popup");
 </script>
 
 </body>
