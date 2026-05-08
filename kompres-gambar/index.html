@@ -1,311 +1,322 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Smart Image Compressor Pro</title>
 
-  <title>Kompres Gambar Online Gratis - Resize & Compress Foto</title>
+<style>
+body {
+  font-family: Arial;
+  background:#111;
+  color:#eee;
+  padding:20px;
+}
 
-  <meta name="description"
-    content="Kompres gambar JPG, PNG, dan WebP langsung di browser tanpa upload ke server. Gratis, aman, tanpa watermark." />
+.container { max-width:1000px; margin:auto; }
 
-  <meta name="robots" content="index, follow" />
-  <link rel="stylesheet" href="../asset/css/donate.css"/>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f5f5f5;
-      margin: 0;
-      padding: 0;
-      color: #222;
-    }
+.dropzone {
+  border:2px dashed #555;
+  padding:30px;
+  text-align:center;
+  background:#1a1a1a;
+  cursor:pointer;
+}
 
-    header {
-      background: white;
-      padding: 30px 20px;
-      text-align: center;
-    }
+input[type=file] { display:none; }
 
-    .container {
-      max-width: 900px;
-      margin: auto;
-      padding: 20px;
-    }
+.controls {
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin:15px 0;
+}
 
-    .box,
-    .content {
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      margin-bottom: 20px;
-    }
+label {
+  background:#222;
+  padding:10px;
+  border-radius:8px;
+}
 
-    input[type="file"],
-    input[type="number"],
-    input[type="range"] {
-      width: 100%;
-      margin: 10px 0;
-    }
+#preview {
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(250px,1fr));
+  gap:15px;
+}
 
-    button {
-      background: #007bff;
-      color: white;
-      border: none;
-      padding: 12px 15px;
-      border-radius: 5px;
-      cursor: pointer;
-      margin-top: 10px;
-      width: 100%;
-    }
+.card {
+  background:#1e1e1e;
+  padding:10px;
+  border-radius:10px;
+}
 
-    button:hover {
-      background: #0056b3;
-    }
+img { width:100%; border-radius:8px; }
 
-    .info {
-      margin-top: 10px;
-      font-size: 14px;
-      color: #555;
-      line-height: 1.6;
-    }
+.small { font-size:12px; color:#aaa; }
 
-    .preview {
-      max-width: 100%;
-      margin-top: 15px;
-      border-radius: 10px;
-    }
-
-    footer {
-      text-align: center;
-      padding: 30px;
-      font-size: 14px;
-      color: #777;
-    }
-
-    .slider-value {
-      font-weight: bold;
-      color: #007bff;
-    }
-  </style>
+button {
+  margin-top:5px;
+  padding:6px 10px;
+  background:#00aaff;
+  border:none;
+  color:#fff;
+  border-radius:6px;
+}
+</style>
 </head>
 
 <body>
-
-<header>
-  <h1>Kompres Gambar Online Gratis</h1>
-  <p>Kompres JPG, PNG, dan WebP langsung di browser tanpa upload ke server</p>
-</header>
-
 <div class="container">
 
-  <!-- TOOL -->
+<h2>Smart Image Compressor Pro</h2>
 
-  <div class="box">
+<div class="dropzone" id="dropzone">
+Klik / Drag & Drop Image
+<input type="file" id="fileInput" multiple accept="image/*">
+</div>
 
-    <h2>Kompres Gambar</h2>
+<!-- MODE SWITCH -->
+<div class="controls">
+  <label>
+    Mode
+    <select id="mode">
+      <option value="manual">Manual</option>
+      <option value="target">Target Size</option>
+    </select>
+  </label>
 
-    <input type="file" id="imgInput" accept="image/*" />
+  <label id="qualityBox">
+    Quality
+    <input type="range" id="quality" min="10" max="100" value="80">
+  </label>
 
-    <label>
-      Quality:
-      <span class="slider-value" id="qualityValue">70%</span>
-    </label>
+  <label id="dpiBox">
+    Scale
+    <select id="dpi">
+      <option value="1">100%</option>
+      <option value="0.75">75%</option>
+      <option value="0.5">50%</option>
+    </select>
+  </label>
 
-    <input
-      type="range"
-      id="quality"
-      min="10"
-      max="100"
-      step="5"
-      value="70"
-    />
+  <label id="targetBox" style="display:none;">
+    Target KB
+    <input type="number" id="target" value="200" min="10">
+  </label>
+</div>
 
-    <label>Max Width</label>
-
-    <input type="number" id="maxWidth" value="1200" />
-
-    <div class="info">
-      <div>Width: <span id="imgWidth">-</span></div>
-      <div>Height: <span id="imgHeight">-</span></div>
-      <div>Ukuran asli: <span id="originalSize">-</span></div>
-      <div>Estimasi ukuran: <span id="estimatedSize">-</span></div>
-    </div>
-
-    <button onclick="compressImage()">
-      Kompres & Download
-    </button>
-
-    <div class="info" id="compressResult"></div>
-
-    <img id="preview" class="preview" />
-
-  </div>
-
-  <!-- CONTENT -->
-
-  <div class="content">
-
-    <h2>Apa itu Kompres Gambar?</h2>
-
-    <p>
-      Kompres gambar online adalah proses mengecilkan ukuran file gambar
-      tanpa perlu menginstall aplikasi tambahan.
-    </p>
-
-    <p>
-      Tool ini bekerja langsung di browser sehingga gambar tidak diupload ke server.
-      Lebih aman, cepat, dan gratis digunakan.
-    </p>
-
-    <h3>Cara menggunakan:</h3>
-
-    <ol>
-      <li>Upload gambar JPG, PNG, atau WebP</li>
-      <li>Atur kualitas kompresi</li>
-      <li>Atur ukuran lebar maksimal jika diperlukan</li>
-      <li>Klik tombol Kompres & Download</li>
-      <li>File otomatis terdownload</li>
-    </ol>
-
-  </div>
+<div id="preview"></div>
 
 </div>
 
-<footer>
-  © 2026 Tools Online Gratis
-</footer>
-
-<div id="donation-popup"></div>
-
-<!-- CDN -->
-
-<script src="https://cdn.jsdelivr.net/npm/browser-image-compression@latest/dist/browser-image-compression.js"></script>
-<script src="../asset/js/include.js"></script>
-<script src="../asset/js/donate.js"></script>
-
 <script>
+const dropzone = document.getElementById("dropzone");
+const fileInput = document.getElementById("fileInput");
+const preview = document.getElementById("preview");
 
-const imgInput = document.getElementById('imgInput');
-const qualitySlider = document.getElementById('quality');
+const modeEl = document.getElementById("mode");
+const qualityEl = document.getElementById("quality");
+const dpiEl = document.getElementById("dpi");
+const targetEl = document.getElementById("target");
 
-let currentFile = null;
+const qualityBox = document.getElementById("qualityBox");
+const dpiBox = document.getElementById("dpiBox");
+const targetBox = document.getElementById("targetBox");
 
-function formatBytes(bytes) {
+let filesData = [];
 
-  if (bytes < 1024) return bytes + ' B';
+dropzone.onclick = () => fileInput.click();
+fileInput.onchange = e => handleFiles(e.target.files);
 
-  if (bytes < 1024 * 1024)
-    return (bytes / 1024).toFixed(2) + ' KB';
+dropzone.ondragover = e => e.preventDefault();
+dropzone.ondrop = e => {
+  e.preventDefault();
+  handleFiles(e.dataTransfer.files);
+};
 
-  return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+/* =========================
+   FORMAT DETECTION (AUTO)
+========================= */
+function getMime(type) {
+  if (type.includes("png")) return "image/png";
+  if (type.includes("webp")) return "image/webp";
+  if (type.includes("jpeg") || type.includes("jpg")) return "image/jpeg";
+
+  return "image/jpeg"; // fallback
 }
 
-/* REALTIME QUALITY */
+function getExt(type) {
+  if (type.includes("png")) return "png";
+  if (type.includes("webp")) return "webp";
+  if (type.includes("jpeg") || type.includes("jpg")) return "jpg";
 
-qualitySlider.addEventListener('input', updateRealtimeInfo);
+  return "jpg";
+}
 
-imgInput.addEventListener('change', async () => {
+/* =========================
+   FILE HANDLER
+========================= */
+function handleFiles(files) {
+  for (let f of files) {
+    if (!f.type.startsWith("image")) continue;
 
-  currentFile = imgInput.files[0];
+    const r = new FileReader();
+    r.onload = e => {
+      filesData.push({
+        name: f.name,
+        type: f.type,
+        src: e.target.result,
+        file: f
+      });
+      render();
+    };
+    r.readAsDataURL(f);
+  }
+}
 
-  if (!currentFile) return;
-
-  document.getElementById('originalSize').innerText =
-    formatBytes(currentFile.size);
-
+/* =========================
+   COMPRESS CORE
+========================= */
+function compress(imgSrc, quality, scale, mime, cb) {
   const img = new Image();
+  img.src = imgSrc;
 
-  img.onload = function () {
+  img.onload = () => {
+    const canvas = document.createElement("canvas");
+    canvas.width = img.width * scale;
+    canvas.height = img.height * scale;
 
-    document.getElementById('imgWidth').innerText =
-      img.width + ' px';
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-    document.getElementById('imgHeight').innerText =
-      img.height + ' px';
+    canvas.toBlob(blob => {
+      cb(URL.createObjectURL(blob), blob);
+    }, mime, quality);
   };
-
-  img.src = URL.createObjectURL(currentFile);
-
-  updateRealtimeInfo();
-});
-
-function updateRealtimeInfo() {
-
-  const quality = qualitySlider.value;
-
-  document.getElementById('qualityValue').innerText =
-    quality + '%';
-
-  if (!currentFile) return;
-
-  /* estimasi sederhana */
-
-  const estimated =
-    currentFile.size * (quality / 100);
-
-  document.getElementById('estimatedSize').innerText =
-    formatBytes(estimated);
 }
 
-async function compressImage() {
+/* =========================
+   TARGET SIZE MODE
+========================= */
+function compressTarget(imgSrc, targetKB, scale, mime, cb) {
+  const img = new Image();
+  img.src = imgSrc;
 
-  const file = imgInput.files[0];
+  img.onload = () => {
+    let q = 0.9;
 
-  if (!file) {
-    alert('Pilih gambar terlebih dahulu');
-    return;
-  }
+    const run = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
 
-  const quality =
-    parseInt(qualitySlider.value) / 100;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-  const maxWidth =
-    parseInt(document.getElementById('maxWidth').value);
+      canvas.toBlob(blob => {
+        const size = blob.size / 1024;
 
-  const options = {
-    maxSizeMB: 5,
-    maxWidthOrHeight: maxWidth,
-    useWebWorker: true,
-    initialQuality: quality
+        if (size > targetKB && q > 0.1) {
+          q -= 0.05;
+          run();
+        } else {
+          cb(URL.createObjectURL(blob), blob);
+        }
+      }, mime, q);
+    };
+
+    run();
   };
-
-  try {
-
-    document.getElementById('compressResult').innerText =
-      'Mengompres gambar...';
-
-    const compressedFile =
-      await imageCompression(file, options);
-
-    const url =
-      URL.createObjectURL(compressedFile);
-
-    document.getElementById('preview').src = url;
-
-    document.getElementById('compressResult').innerText =
-      `Berhasil dikompres: ${formatBytes(compressedFile.size)}
-       dari ${formatBytes(file.size)}`;
-
-    const a = document.createElement('a');
-
-    a.href = url;
-
-    a.download = 'compressed-image.jpg';
-
-    a.click();
-
-  } catch (err) {
-
-    console.error(err);
-
-    alert('Gagal mengompres gambar');
-  }
 }
 
-include("donate.html", "#donation-popup");
+/* =========================
+   RENDER PIPELINE
+========================= */
+function render() {
+  preview.innerHTML = "";
+
+  const mode = modeEl.value;
+  const scale = parseFloat(dpiEl.value);
+
+  filesData.forEach(item => {
+
+    const mime = getMime(item.type);
+    const ext = getExt(item.type);
+
+    const card = document.createElement("div");
+    card.className = "card";
+
+    card.innerHTML = `
+      <img src="${item.src}">
+      <div class="small">Original: ${(item.file.size/1024).toFixed(1)} KB</div>
+      <div class="status">Processing...</div>
+      <button>Download</button>
+    `;
+
+    preview.appendChild(card);
+
+    const status = card.querySelector(".status");
+    const btn = card.querySelector("button");
+
+    if (mode === "manual") {
+
+      const q = qualityEl.value / 100;
+
+      compress(item.src, q, scale, mime, (url, blob) => {
+        status.innerHTML = `Compressed: ${(blob.size/1024).toFixed(2)} KB`;
+
+        const name = "compressed_" + item.name.split(".")[0] + "." + ext;
+
+        btn.onclick = () => {
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = name;
+          a.click();
+        };
+      });
+
+    } else {
+
+      const target = parseFloat(targetEl.value);
+
+      compressTarget(item.src, target, scale, mime, (url, blob) => {
+        status.innerHTML = `Target: ${(blob.size/1024).toFixed(2)} KB`;
+
+        const name = "compressed_" + item.name.split(".")[0] + "." + ext;
+
+        btn.onclick = () => {
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = name;
+          a.click();
+        };
+      });
+    }
+  });
+}
+
+/* =========================
+   MODE SWITCH UI
+========================= */
+modeEl.onchange = () => {
+  if (modeEl.value === "manual") {
+    qualityBox.style.display = "block";
+    dpiBox.style.display = "block";
+    targetBox.style.display = "none";
+  } else {
+    qualityBox.style.display = "none";
+    dpiBox.style.display = "block";
+    targetBox.style.display = "block";
+  }
+
+  render();
+};
+
+qualityEl.oninput = render;
+dpiEl.onchange = render;
+targetEl.oninput = render;
+
 </script>
-
 </body>
 </html>
 

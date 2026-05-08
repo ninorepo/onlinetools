@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Advanced Image Repair Pipeline (JS + WASM FIXED)</title>
-
+<link rel="stylesheet" href="../asset/css/donate.css">
 <style>
 body {
   margin: 0;
@@ -100,7 +100,8 @@ button:hover { background: #1e40af; }
 </div>
 
 </div>
-
+<footer></footer>
+<div id="donation-popup"></div>
 <!-- =========================
      WASM LIBRARIES
 ========================= -->
@@ -119,7 +120,8 @@ onload="window.VIPS_WASM_LOADED=true"></script>
 
 <script src="https://cdn.jsdelivr.net/npm/@imagemagick/magick-wasm@0.0.31/dist/magick.js"
 onload="initMagick()"></script>
-
+<script src="../asset/js/donate.js"></script>
+<script src="../asset/js/include.js">
 <script>
 function initMagick() {
   window.MAGICK_WASM_LOADED = true;
@@ -394,6 +396,7 @@ function downloadResult() {
   log("Downloaded result", "good");
 }
 
+include("donate.html", "#donation-popup");
 </script>
 </body>
 </html>

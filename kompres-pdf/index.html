@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Smart PDF Optimizer Pro</title>
+
+<script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+<style>
+body{
+  font-family: Arial;
+  background:#0f172a;
+  color:white;
+  padding:20px;
+}
+.box{
+  max-width:700px;
+  margin:auto;
+  background:#111827;
+  padding:20px;
+  border-radius:12px;
+}
+input, select, button{
+  width:100%;
+  margin-top:10px;
+  padding:10px;
+}
+button{
+  background:#22c55e;
+  border:none;
+  color:white;
+  font-weight:bold;
+  border-radius:8px;
+  cursor:pointer;
+}
+button:disabled{ background:gray; }
+.status{ margin-top:10px; color:#93c5fd; }
+.small{ font-size:13px; color:#cbd5e1; }
+</style>
+</head>
+
+<body>
+
+<div class="box">
+<h2>Smart PDF Optimizer Pro</h2>
+
+<input type="file" id="file" accept="application/pdf"/>
+
+<select id="mode">
+  <option value="safe">Safe (no risk)</option>
+  <option value="balanced" selected>Balanced</option>
+  <option value="aggressive">Aggressive (max compression)</option>
+</select>
+
+<div class="small" id="info">Upload PDF...</div>
+
+<button id="run">Optimize PDF</button>
+
+<div class="status" id="status"></div>
+
+<button id="download" disabled>Download</button>
+</div>
+
+<script>
+const fileInput = document.getElementById("file");
+const mode = document.getElementById("mode");
+const status = document.getElementById("status");
+const runBtn = document.getElementById("run");
+const downloadBtn = document.getElementById("download");
+const info = document.getElementById("info");
+
+let fileData = null;
+let resultBlob = null;
+
+fileInput.onchange = (e)=>{
+  fileData = e.target.files[0];
+  info.textContent = `${fileData.name} (${(fileData.size/1024/1024).toFixed(2)} MB)`;
+};
+
+function estimate(size, mode){
+  if(mode==="safe") return size*0.95;
+  if(mode==="balanced") return size*0.75;
+  return size*0.55;
+}
+
+runBtn.onclick = async ()=>{
+  if(!fileData) return alert("Upload PDF dulu!");
+
+  runBtn.disabled = true;
+  status.textContent = "Loading PDF...";
+
+  const arrayBuffer = await fileData.arrayBuffer();
+
+  const { PDFDocument } = PDFLib;
+  const pdfDoc = await PDFDocument.load(arrayBuffer, {
+    ignoreEncryption: true
+  });
+
+  // =========================
+  // 1. METADATA CLEANING
+  // =========================
+  status.textContent = "Cleaning metadata...";
+  pdfDoc.setTitle("");
+  pdfDoc.setAuthor("");
+  pdfDoc.setSubject("");
+  pdfDoc.setKeywords([]);
+  pdfDoc.setProducer("");
+  pdfDoc.setCreator("");
+
+  // =========================
+  // 2. IMAGE OPTIMIZATION (light)
+  // =========================
+  const pages = pdfDoc.getPages();
+
+  const pdfjsLib = window['pdfjs-dist/build/pdf'];
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+  const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+
+  let processedImages = 0;
+  const quality = mode.value === "aggressive" ? 0.6 : 0.8;
+
+  for(let i=0;i<pages.length;i++){
+    status.textContent = `Optimizing page ${i+1}/${pages.length}`;
+
+    const page = await pdf.getPage(i+1);
+    const ops = await page.getOperatorList();
+
+    for(let j=0;j<ops.fnArray.length;j++){
+      const fn = ops.fnArray[j];
+
+      if(
+        fn === pdfjsLib.OPS.paintImageXObject ||
+        fn === pdfjsLib.OPS.paintJpegXObject
+      ){
+        try{
+          const imgName = ops.argsArray[j][0];
+          const img = await page.objs.get(imgName);
+
+          if(img?.data){
+            const blob = new Blob([img.data]);
+            const url = URL.createObjectURL(blob);
+
+            const image = new Image();
+            await new Promise(res=>{
+              image.onload = res;
+              image.src = url;
+            });
+
+            const canvas = document.createElement("canvas");
+            canvas.width = image.width;
+            canvas.height = image.height;
+
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(image,0,0);
+
+            const compressed = await new Promise(r=>{
+              canvas.toBlob(b=>b.arrayBuffer().then(r),"image/jpeg",quality);
+            });
+
+            const embedded = await pdfDoc.embedJpg(compressed);
+            pages[i].drawImage(embedded,{
+              x:0,y:0,
+              width:pages[i].getWidth(),
+              height:pages[i].getHeight()
+            });
+
+            processedImages++;
+          }
+        }catch(e){}
+      }
+    }
+  }
+
+  // =========================
+  // 3. SAVE OPTIMIZED PDF
+  // =========================
+  status.textContent = "Rebuilding optimized PDF...";
+
+  const outBytes = await pdfDoc.save({
+    useObjectStreams: true,
+    addDefaultPage: false
+  });
+
+  resultBlob = new Blob([outBytes], {type:"application/pdf"});
+
+  status.textContent =
+    `Done. Images optimized: ${processedImages}`;
+
+  downloadBtn.disabled = false;
+  runBtn.disabled = false;
+};
+
+downloadBtn.onclick = ()=>{
+  const url = URL.createObjectURL(resultBlob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "optimized.pdf";
+  a.click();
+};
+</script>
+
+</body>
+</html>
+
