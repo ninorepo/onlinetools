@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Advanced Image Repair Pipeline (JS + WASM FIXED)</title>
+
+<style>
+body {
+  margin: 0;
+  background: #0b1220;
+  color: white;
+  font-family: Arial;
+}
+
+.container {
+  max-width: 1000px;
+  margin: auto;
+  padding: 20px;
+}
+
+.card {
+  background: #111827;
+  padding: 15px;
+  border-radius: 12px;
+  margin-bottom: 15px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+img {
+  width: 100%;
+  border-radius: 10px;
+  background: black;
+}
+
+button {
+  padding: 10px;
+  border: 0;
+  border-radius: 8px;
+  background: #2563eb;
+  color: white;
+  cursor: pointer;
+  margin-right: 5px;
+}
+
+button:hover { background: #1e40af; }
+
+.log {
+  background: black;
+  padding: 10px;
+  height: 220px;
+  overflow: auto;
+  font-size: 12px;
+}
+
+.badge {
+  padding: 2px 6px;
+  border-radius: 5px;
+  margin-right: 5px;
+}
+
+.good { background: green; }
+.warn { background: orange; }
+.bad { background: red; }
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>🛠 Advanced Image Repair Pipeline (WASM FIXED)</h2>
+
+<div class="card">
+  <input type="file" id="file" accept="image/*">
+  <button onclick="runPipeline()">Start Repair</button>
+  <button onclick="downloadResult()">Download Result</button>
+</div>
+
+<div class="card row">
+  <div>
+    <h3>Original</h3>
+    <img id="orig">
+  </div>
+  <div>
+    <h3>Result</h3>
+    <img id="result">
+  </div>
+</div>
+
+<div class="card">
+  <h3>Status</h3>
+  <div id="status"></div>
+  <div class="log" id="log"></div>
+</div>
+
+</div>
+
+<!-- =========================
+     WASM LIBRARIES
+========================= -->
+
+<script async src="https://docs.opencv.org/4.x/opencv.js"></script>
+
+<script>
+window.VIPS_WASM_LOADED = false;
+window.MAGICK_WASM_LOADED = false;
+window.cvReady = false;
+window.magickReady = false;
+</script>
+
+<script src="https://unpkg.com/@sophisc/vips-wasm@latest/dist/vips.js"
+onload="window.VIPS_WASM_LOADED=true"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/@imagemagick/magick-wasm@0.0.31/dist/magick.js"
+onload="initMagick()"></script>
+
+<script>
+function initMagick() {
+  window.MAGICK_WASM_LOADED = true;
+
+  // IMPORTANT FIX: proper initialization
+  if (window.Magick && window.Magick.initialize) {
+    Magick.initialize().then(() => {
+      window.magickReady = true;
+      console.log("ImageMagick WASM ready");
+    }).catch(() => {
+      window.magickReady = false;
+    });
+  } else {
+    window.magickReady = true;
+  }
+}
+</script>
+
+<script>
+
+let fileData = null;
+let lastResultBlob = null;
+
+document.getElementById("file").onchange = (e) => {
+  fileData = e.target.files[0];
+  document.getElementById("orig").src = URL.createObjectURL(fileData);
+  log("File loaded: " + fileData.name, "good");
+};
+
+function log(msg, type="") {
+  const el = document.getElementById("log");
+  el.innerHTML += `<span class="badge ${type}">${type}</span> ${msg}<br>`;
+  el.scrollTop = el.scrollHeight;
+}
+
+function setStatus(s) {
+  document.getElementById("status").innerText = s;
+}
+
+/* =========================
+   FIXED: OpenCV INIT
+========================= */
+
+window.Module = {
+  onRuntimeInitialized() {
+    window.cvReady = true;
+    console.log("OpenCV WASM ready");
+  }
+};
+
+/* =========================
+   WAIT SYSTEM (IMPORTANT FIX)
+========================= */
+
+function waitForWasm() {
+  return new Promise((resolve) => {
+    const check = () => {
+      if (
+        (window.cv ? window.cvReady : true) &&
+        (window.VIPS_WASM_LOADED ? true : true) &&
+        (window.MAGICK_WASM_LOADED ? window.magickReady : true)
+      ) {
+        resolve();
+      } else {
+        setTimeout(check, 100);
+      }
+    };
+    check();
+  });
+}
+
+/* =========================
+   PIPELINE ENGINE
+========================= */
+
+async function runPipeline() {
+
+  if (!fileData) return alert("Upload dulu");
+
+  log("Waiting WASM engines...", "warn");
+  await waitForWasm();
+
+  document.getElementById("log").innerHTML = "";
+
+  const steps = [
+    stepCanvasDecode,
+    stepImageBitmap,
+    stepCanvasReencode,
+    stepOpenCVRepair,
+    stepVipsWasm,
+    stepMagickWasm
+  ];
+
+  let input = fileData;
+
+  for (let i = 0; i < steps.length; i++) {
+    log("Running: " + steps[i].name, "warn");
+
+    try {
+      const out = await steps[i](input);
+
+      if (out) {
+        log("SUCCESS: " + steps[i].name, "good");
+
+        lastResultBlob = out;
+
+        document.getElementById("result").src = URL.createObjectURL(out);
+        setStatus("Repaired by: " + steps[i].name);
+        return;
+      } else {
+        log("FAILED: " + steps[i].name, "bad");
+      }
+    } catch (e) {
+      log("ERROR: " + e.message, "bad");
+    }
+  }
+
+  setStatus("FAILED all engines");
+}
+
+/* =========================
+   1. Canvas Decode
+========================= */
+async function stepCanvasDecode(blob) {
+  return new Promise((resolve) => {
+    const img = new Image();
+
+    img.onload = () => {
+      const c = document.createElement("canvas");
+      c.width = img.width;
+      c.height = img.height;
+
+      const ctx = c.getContext("2d");
+      ctx.drawImage(img, 0, 0);
+
+      c.toBlob(resolve, "image/png");
+    };
+
+    img.onerror = () => resolve(null);
+    img.src = URL.createObjectURL(blob);
+  });
+}
+
+/* =========================
+   2. createImageBitmap
+========================= */
+async function stepImageBitmap(blob) {
+  try {
+    const bmp = await createImageBitmap(blob);
+
+    const c = document.createElement("canvas");
+    c.width = bmp.width;
+    c.height = bmp.height;
+
+    const ctx = c.getContext("2d");
+    ctx.drawImage(bmp, 0, 0);
+
+    return await new Promise(res => c.toBlob(res, "image/png"));
+  } catch {
+    return null;
+  }
+}
+
+/* =========================
+   3. Canvas Reencode
+========================= */
+async function stepCanvasReencode(blob) {
+  return new Promise((resolve) => {
+    const img = new Image();
+
+    img.onload = () => {
+      const c = document.createElement("canvas");
+      c.width = img.width || 1;
+      c.height = img.height || 1;
+
+      const ctx = c.getContext("2d");
+      ctx.drawImage(img, 0, 0);
+
+      c.toBlob(resolve, "image/jpeg", 0.92);
+    };
+
+    img.onerror = () => resolve(null);
+    img.src = URL.createObjectURL(blob);
+  });
+}
+
+/* =========================
+   4. OpenCV WASM Repair
+========================= */
+async function stepOpenCVRepair(blob) {
+  if (!window.cv || !window.cvReady) {
+    log("OpenCV not ready", "warn");
+    return null;
+  }
+
+  try {
+    const img = await createImageBitmap(blob);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = img.width;
+    canvas.height = img.height;
+
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(img, 0, 0);
+
+    let src = cv.imread(canvas);
+    let dst = new cv.Mat();
+
+    cv.fastNlMeansDenoisingColored(src, dst, 10, 10, 7, 21);
+
+    cv.imshow(canvas, dst);
+
+    src.delete(); dst.delete();
+
+    return await new Promise(res => canvas.toBlob(res, "image/png"));
+  } catch {
+    return null;
+  }
+}
+
+/* =========================
+   5. libvips WASM
+========================= */
+async function stepVipsWasm(blob) {
+  if (!window.VIPS_WASM_LOADED || !window.vips) return null;
+
+  try {
+    const buf = await blob.arrayBuffer();
+    const img = vips.Image.newFromBuffer(new Uint8Array(buf));
+    const out = img.rewrite();
+    const outBuf = out.writeToBuffer(".png");
+
+    return new Blob([outBuf], { type: "image/png" });
+  } catch {
+    return null;
+  }
+}
+
+/* =========================
+   6. ImageMagick WASM
+========================= */
+async function stepMagickWasm(blob) {
+  if (!window.magickReady || !window.Magick) return null;
+
+  try {
+    const arrayBuffer = await blob.arrayBuffer();
+
+    const result = await Magick.readImage({
+      blob: new Blob([arrayBuffer])
+    });
+
+    result.blur(1, 1);
+
+    const output = await result.write("image/png");
+
+    return new Blob([output], { type: "image/png" });
+  } catch {
+    return null;
+  }
+}
+
+/* =========================
+   DOWNLOAD
+========================= */
+function downloadResult() {
+  if (!lastResultBlob) return alert("No result yet!");
+
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(lastResultBlob);
+  a.download = "repaired.png";
+  a.click();
+  log("Downloaded result", "good");
+}
+
+</script>
+</body>
+</html>
+
