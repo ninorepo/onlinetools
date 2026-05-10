@@ -137,6 +137,23 @@ header p {
 	font-size:40px !important;
 }
 
+/* Icon coloring */
+#gabung-pdf-icon {
+	color: #ff6b6b;
+}
+
+#split-pdf-icon {
+	color: #fb923c;
+}
+
+#kompres-gambar-icon {
+	color: #34c759;
+}
+
+#resize-gambar-icon {
+	color: #a78bfa;
+}
+
 /* floating animations */
 @keyframes floatIdle {
   0%   { transform: translateY(0px); }
@@ -150,6 +167,7 @@ header p {
   100% { transform: translateY(-10px) scale(1.05); }
 }
 
+/* Loading blink animation */
 .memuat {
 	display:none;
 }
