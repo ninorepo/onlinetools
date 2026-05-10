@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>404 - Page Not Found</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    font-family:'Poppins',sans-serif;
+    min-height:100vh;
+    background:
+        radial-gradient(circle at top left,#1e293b,#0f172a 60%);
+    color:white;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+    padding:20px;
+}
+
+.bg-glow{
+    position:absolute;
+    width:600px;
+    height:600px;
+    background:rgba(59,130,246,0.15);
+    border-radius:50%;
+    filter:blur(120px);
+    animation:float 8s ease-in-out infinite;
+}
+
+@keyframes float{
+    0%,100%{
+        transform:translateY(0px);
+    }
+    50%{
+        transform:translateY(-30px);
+    }
+}
+
+.card{
+    position:relative;
+    z-index:2;
+    width:100%;
+    max-width:700px;
+    background:rgba(255,255,255,0.05);
+    backdrop-filter:blur(12px);
+    border:1px solid rgba(255,255,255,0.1);
+    border-radius:28px;
+    padding:60px 40px;
+    text-align:center;
+    box-shadow:
+        0 10px 40px rgba(0,0,0,0.35);
+}
+
+.error-code{
+    font-size:120px;
+    font-weight:700;
+    line-height:1;
+    background:linear-gradient(135deg,#60a5fa,#c084fc);
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+    margin-bottom:20px;
+}
+
+.title{
+    font-size:34px;
+    font-weight:600;
+    margin-bottom:14px;
+}
+
+.description{
+    color:rgba(255,255,255,0.75);
+    line-height:1.8;
+    font-size:16px;
+    max-width:520px;
+    margin:0 auto 35px;
+}
+
+.actions{
+    display:flex;
+    gap:16px;
+    justify-content:center;
+    flex-wrap:wrap;
+}
+
+.btn{
+    text-decoration:none;
+    padding:14px 28px;
+    border-radius:14px;
+    font-weight:600;
+    transition:0.25s;
+    display:inline-block;
+}
+
+.btn-home{
+    background:linear-gradient(135deg,#3b82f6,#8b5cf6);
+    color:white;
+    box-shadow:0 8px 20px rgba(59,130,246,0.35);
+}
+
+.btn-home:hover{
+    transform:translateY(-3px);
+}
+
+.btn-back{
+    border:1px solid rgba(255,255,255,0.15);
+    color:white;
+    background:rgba(255,255,255,0.05);
+}
+
+.btn-back:hover{
+    background:rgba(255,255,255,0.1);
+}
+
+.astronaut{
+    font-size:64px;
+    margin-bottom:20px;
+    animation:floatAstronaut 4s ease-in-out infinite;
+}
+
+@keyframes floatAstronaut{
+    0%,100%{
+        transform:translateY(0px) rotate(-3deg);
+    }
+    50%{
+        transform:translateY(-12px) rotate(3deg);
+    }
+}
+
+@media(max-width:600px){
+
+    .card{
+        padding:45px 24px;
+    }
+
+    .error-code{
+        font-size:84px;
+    }
+
+    .title{
+        font-size:28px;
+    }
+
+    .description{
+        font-size:15px;
+    }
+}
+</style>
+</head>
+<body>
+
+<div class="bg-glow"></div>
+
+<div class="card">
+
+    <div class="astronaut">🚀</div>
+
+    <div class="error-code">404</div>
+
+    <div class="title">
+        Lost in Space
+    </div>
+
+    <div class="description">
+        The page you are looking for might have been removed,
+        renamed, or is temporarily unavailable.
+    </div>
+
+    <div class="actions">
+        <a href="/" class="btn btn-home">
+            Go Home
+        </a>
+
+        <a href="javascript:history.back()" class="btn btn-back">
+            Go Back
+        </a>
+    </div>
+
+</div>
+
+</body>
+</html>
