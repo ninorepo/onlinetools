@@ -1,0 +1,235 @@
+/* =========================
+   GLOBAL / THEME
+========================= */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Inter', sans-serif;
+}
+
+body {
+  background: #0b0b0d;
+  color: #eaeaea;
+  min-height: 100vh;
+}
+
+.container {
+  width: 100%;
+  padding: 20px;
+}
+
+h1 {
+  font-size: 22px;
+  margin-bottom: 6px;
+  letter-spacing: 0.5px;
+}
+
+.desc {
+  font-size: 13px;
+  color: #a0a0a0;
+  margin-bottom: 20px;
+}
+
+/* =========================
+   UPLOAD BOX (FILE PICKER)
+========================= */
+.upload-box {
+  width: 100%;
+  height: 180px;
+  border: 2px dashed #2f2f2f;
+  background: #121214;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin-bottom: 20px;
+  transition: 0.2s;
+}
+
+.upload-box:hover {
+  border-color: #00d4ff;
+  background: #151518;
+}
+
+/* hide default input */
+.upload-box input[type="file"] {
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  position: absolute;
+}
+
+/* CDN ICON (Font Awesome) */
+.upload-box::before {
+  content: "15b";
+  font-family: "Font Awesome 5 Free";
+  font-weight: 900;
+  font-size: 42px;
+  color: #444;
+  position: absolute;
+}
+
+.upload-box::after {
+  content: "Drop PDF / Click to Upload";
+  position: absolute;
+  bottom: 20px;
+  font-size: 13px;
+  color: #777;
+}
+
+/* =========================
+   CONTROL PANEL (WINDOWS 8 STYLE)
+========================= */
+.panel {
+  position: fixed;
+  bottom: 90px;
+  left: 20px;
+  width: 320px;
+  background: #0f0f12;
+  border: 1px solid #1e1e1e;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transform: translateY(20px);
+  opacity: 0;
+  pointer-events: none;
+  transition: 0.2s ease;
+}
+
+/* toggle open state */
+.panel.active {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+/* buttons blocky windows-8 style */
+.panel button {
+  border: none;
+  padding: 14px;
+  text-align: left;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  border-bottom: 1px solid #111;
+  border-radius: 0;
+}
+
+/* distinct colors */
+#downloadSelected {
+  background: #0078d7;
+}
+
+#downloadAll {
+  background: #00a300;
+}
+
+#downloadRange {
+  background: #ff8c00;
+}
+
+.panel button:hover {
+  filter: brightness(1.1);
+}
+
+/* input field */
+#rangeInput {
+  padding: 12px;
+  border: none;
+  outline: none;
+  background: #1a1a1f;
+  color: #fff;
+  border-top: 1px solid #111;
+}
+
+/* =========================
+   FLOATING DOWNLOAD BUTTON
+========================= */
+#hidden-colapsible-button {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  background: #e81123;
+  color: white;
+  padding: 16px 22px;
+  font-weight: bold;
+  cursor: pointer;
+  border-radius: 0;
+  box-shadow: 0 4px 0 #7a0b12;
+  user-select: none;
+}
+
+#hidden-colapsible-button::after {
+  content: " ➜";
+}
+
+#hidden-colapsible-button::after {
+  content: " ➜";
+  display: inline-block;
+  transition: 0.2s;
+}
+
+#hidden-colapsible-button.open::after {
+  transform: rotate(-90deg);
+}
+
+/* =========================
+   PREVIEW GRID
+========================= */
+.preview-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0;
+  margin-top: 20px;
+}
+
+/* preview blocks */
+.preview-container .page {
+  background: #141418;
+  border: 1px solid #1f1f1f;
+  height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  font-size: 12px;
+}
+
+/* =========================
+   TABLET
+========================= */
+@media (max-width: 900px) {
+  .preview-container {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  }
+
+  .panel {
+    width: 260px;
+  }
+}
+
+/* =========================
+   MOBILE
+========================= */
+@media (max-width: 600px) {
+  .preview-container {
+    grid-template-columns: 1fr;
+  }
+
+  .preview-container .page {
+    height: 180px;
+  }
+
+  .panel {
+    width: calc(100% - 40px);
+    left: 20px;
+  }
+
+  #hidden-colapsible-button {
+    width: calc(100% - 40px);
+    text-align: center;
+  }
+}
+
