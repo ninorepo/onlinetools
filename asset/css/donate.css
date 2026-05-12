@@ -1,43 +1,249 @@
-    /* DONATE BUTTON */
+/* =========================
+   QRIS DONATION POPUP
+   Dark Theme Responsive
+========================= */
 
-    #donateBtn {
-      width: auto;
-      position: fixed;
-      bottom: 5px;
-      right: 5px;
-      background: #ffcc00;
-      border: none;
-      padding: 12px 16px;
-      border-radius: 50px;
-      cursor: pointer;
-      font-weight: bold;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-      z-index: 1000;
-    }
+/* =========================
+   DONATE FLOATING BUTTON
+========================= */
 
-    /* MODAL */
+#donateBtn {
+  position: fixed;
 
-    .modal {
-      display: none;
-      position: fixed;
-      z-index: 999;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.5);
-    }
+  left: 100%;
+  top: 50%;
 
-    .modal-content {
-      background: white;
-      max-width: 400px;
-      margin: 10% auto;
-      padding: 20px;
-      border-radius: 12px;
-      text-align: center;
-    }
+  width: fit-content;
+  #height: 10px;
 
-    .modal-content img {
-      width: 220px;
-      border-radius: 10px;
-    }
+  transform-origin: bottom left;
+  transform: translateY(-50%) rotate(-90deg);
+
+  z-index: 999;
+
+  background: linear-gradient(135deg, #7c3aed, #9333ea);
+  color: white;
+
+  border: none;
+  border-radius: 14px 14px 0 0;
+
+  font-size: 12px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  box-shadow:
+    0 10px 25px rgba(0,0,0,0.45),
+    0 0 20px rgba(124,58,237,0.25);
+
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+#donateBtn:hover {
+  transform:
+    translateY(-50%)
+    rotate(-90deg)
+    translateX(-2px);
+
+  box-shadow:
+    0 14px 30px rgba(0,0,0,0.55),
+    0 0 25px rgba(124,58,237,0.4);
+}
+
+#donateBtn:active {
+  transform:
+    translateY(-50%)
+    rotate(-90deg)
+    scale(0.98);
+}
+
+/* =========================
+   MODAL OVERLAY
+========================= */
+
+.modal {
+  display: none;
+
+  position: fixed;
+  inset: 0;
+
+  z-index: 9999;
+
+  background: rgba(0, 0, 0, 0.78);
+
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+
+  padding: 20px;
+}
+
+/* =========================
+   MODAL BOX
+========================= */
+
+.modal-content {
+  position: absolute;
+
+  top: 50%;
+  left: 50%;
+
+  transform: translate(-50%, -50%);
+
+  width: calc(100% - 32px);
+  max-width: 500px;
+
+  background: #14161b;
+  color: #f3f4f6;
+
+  border-radius: 22px;
+
+  padding: 28px 24px;
+
+  text-align: center;
+
+  border: 1px solid rgba(255,255,255,0.06);
+
+  box-shadow:
+    0 20px 50px rgba(0,0,0,0.55),
+    0 0 0 1px rgba(255,255,255,0.03);
+
+  animation: popupFade 0.25s ease;
+}
+
+/* =========================
+   TITLE
+========================= */
+
+.modal-content h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+
+  margin-bottom: 14px;
+
+  color: #ffffff;
+}
+
+/* =========================
+   DESCRIPTION
+========================= */
+
+.modal-content p {
+  color: #b6bcc8;
+
+  line-height: 1.7;
+  font-size: 0.98rem;
+
+  margin-bottom: 24px;
+}
+
+/* =========================
+   QRIS IMAGE
+========================= */
+
+.modal-content img {
+  width: 100%;
+  max-width: 380px;
+
+  background: #ffffff;
+
+  padding: 14px;
+  border-radius: 18px;
+
+  display: block;
+  margin: 0 auto;
+
+  box-shadow:
+    0 12px 30px rgba(0,0,0,0.35);
+
+  object-fit: contain;
+}
+
+/* =========================
+   CLOSE BUTTON
+========================= */
+
+.modal-content button {
+  margin-top: 26px;
+
+  background: #23262f;
+  color: #ffffff;
+
+  border: 1px solid rgba(255,255,255,0.06);
+
+  padding: 12px 22px;
+
+  border-radius: 12px;
+
+  font-size: 15px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.modal-content button:hover {
+  background: #2f3440;
+  transform: translateY(-1px);
+}
+
+/* =========================
+   ANIMATION
+========================= */
+
+@keyframes popupFade {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -48%) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+/* =========================
+   MOBILE
+========================= */
+
+@media (max-width: 600px) {
+
+  #donateBtn {
+    width: 180px;
+    height: 48px;
+
+    font-size: 14px;
+  }
+
+  .modal-content {
+    width: calc(100% - 24px);
+
+    padding: 24px 18px;
+
+    border-radius: 18px;
+  }
+
+  .modal-content h3 {
+    font-size: 1.25rem;
+  }
+
+  .modal-content p {
+    font-size: 0.93rem;
+  }
+
+  /* Larger QRIS on mobile */
+  .modal-content img {
+    max-width: 100%;
+
+    padding: 10px;
+
+    border-radius: 16px;
+  }
+
+}
+
