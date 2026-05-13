@@ -7,14 +7,12 @@
    DONATE FLOATING BUTTON
 ========================= */
 
-#donateBtn {
+#donate-floating {
   position: fixed;
-
+  width: 160px;
+  height: 30px;
   left: 100%;
   top: 50%;
-
-  width: fit-content;
-  #height: 10px;
 
   transform-origin: bottom left;
   transform: translateY(-50%) rotate(-90deg);

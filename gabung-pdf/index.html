@@ -20,9 +20,8 @@
 </head>
 <body><header>
   <h1>Gabungkan PDF Online Gratis</h1>
-  <p>Gabungkan beberapa file PDF menjadi satu langsung di browser tanpa aplikasi</p>
+  <p>Gabungkan atau Merge beberapa file PDF menjadi satu secara online, gratis, tanpa iklan dan tanpa aplikasi ribet</p>
 </header><div class="container">  <!-- TOOL -->  <div class="box">
-    <h2>Merge PDF</h2>
     <p>Pilih minimal 2 file PDF untuk digabungkan</p>
     <input type="file" id="pdfFiles" multiple accept="application/pdf" />
     <button onclick="mergePDF()">Gabungkan PDF</button>
@@ -45,11 +44,11 @@
   </div></div><footer>
   © 2026 Tools Online Gratis
 </footer>
-<div id="donation-popup"></div>
+<!--include:donate.html-->
 <!-- PDF LIB -->
-<script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
-<script src="../asset/js/donate.js"></script>
 <script src="../asset/js/include.js"></script>
+<script src="../asset/js/donate.js"></script>
+<script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
 <script>
 async function mergePDF() {
   const input = document.getElementById('pdfFiles');
@@ -93,7 +92,6 @@ function closeDonate() {
   document.getElementById("donateModal").style.display = "none";
 }
 
-include("donate.html", "#donation-popup");
 </script>
 </body>
 </html>

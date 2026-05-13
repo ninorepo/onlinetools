@@ -5,7 +5,7 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Inter', sans-serif; 
 }
 
 body {
@@ -23,6 +23,11 @@ h1 {
   font-size: 22px;
   margin-bottom: 6px;
   letter-spacing: 0.5px;
+  text-align: center;
+}
+
+h1 + p {
+	text-align: center;
 }
 
 .desc {
@@ -81,34 +86,24 @@ h1 {
    CONTROL PANEL
 ========================= */
 .panel {
-  position: fixed;
-  bottom: 90px;
-  left: 20px;
-  width: 320px;
+  max-width: 400px;
   background: #0f0f12;
   border: 1px solid #1e1e1e;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  transform: translateY(20px);
-  opacity: 0;
-  pointer-events: none;
-  transition: 0.2s ease;
+  display: none;
+  margin:0 auto;
 }
 
-.panel.active {
-  opacity: 1;
-  transform: translateY(0);
-  pointer-events: auto;
+.active {
+  display: block;
 }
 
 .panel button {
+  width:100%;
   border: none;
   padding: 14px;
   text-align: left;
   font-weight: 600;
   color: #fff;
-  cursor: pointer;
   border-bottom: 1px solid #111;
 }
 
@@ -140,10 +135,15 @@ h1 {
 /* =========================
    FLOATING BUTTON
 ========================= */
-#hidden-colapsible-button {
-  position: fixed;
-  bottom: 20px;
-  left: 20px;
+#menu {
+  position: sticky;
+  top:0px;
+  width: 100%;
+}
+
+#colapsible-button {
+  text-align: center;
+  margin: 0 auto;
   background: #e81123;
   color: white;
   padding: 16px 22px;
@@ -151,16 +151,17 @@ h1 {
   cursor: pointer;
   user-select: none;
   box-shadow: 0 4px 0 #7a0b12;
+  max-width:400px;
 }
 
-#hidden-colapsible-button::after {
+#colapsible-button::after {
   content: " ➜";
   display: inline-block;
   transition: 0.2s;
 }
 
-#hidden-colapsible-button.open::after {
-  transform: rotate(-90deg);
+#colapsible-button.open::after {
+  transform: rotate(90deg);
 }
 
 /* =========================
@@ -223,13 +224,11 @@ h1 {
   }
 
   .panel {
-    width: calc(100% - 40px);
-    left: 20px;
+    width:100%;
   }
 
-  #hidden-colapsible-button {
-    width: calc(100% - 40px);
-    text-align: center;
+  #colapsible-button {
+    width: 100%;
   }
 }
 

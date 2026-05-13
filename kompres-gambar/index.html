@@ -4,6 +4,8 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Smart Image Compressor Pro</title>
+<link rel="stylesheet" href="../asset/css/donate.css">
+<link rel="stylesheet" href="../asset/css/kompres-gambar.css">
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-8DM83DZ4HZ"></script>
 <script>
@@ -14,71 +16,14 @@
   gtag('config', 'G-8DM83DZ4HZ');
 </script>
 
-<style>
-body {
-  font-family: Arial;
-  background:#111;
-  color:#eee;
-  padding:20px;
-}
-
-.container { max-width:1000px; margin:auto; }
-
-.dropzone {
-  border:2px dashed #555;
-  padding:30px;
-  text-align:center;
-  background:#1a1a1a;
-  cursor:pointer;
-}
-
-input[type=file] { display:none; }
-
-.controls {
-  display:flex;
-  flex-wrap:wrap;
-  gap:10px;
-  margin:15px 0;
-}
-
-label {
-  background:#222;
-  padding:10px;
-  border-radius:8px;
-}
-
-#preview {
-  display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(250px,1fr));
-  gap:15px;
-}
-
-.card {
-  background:#1e1e1e;
-  padding:10px;
-  border-radius:10px;
-}
-
-img { width:100%; border-radius:8px; }
-
-.small { font-size:12px; color:#aaa; }
-
-button {
-  margin-top:5px;
-  padding:6px 10px;
-  background:#00aaff;
-  border:none;
-  color:#fff;
-  border-radius:6px;
-}
-</style>
 </head>
 
 <body>
+	<header>
+		<h1>Kompres Gambar Online Gratis</h1>
+		<p>Kecilkan ukuran gambar tanpa mengurangi kualitas yang nampak. Gratis tanpa iklan, no ribet.</p>
+	</header>
 <div class="container">
-
-<h2>Smart Image Compressor Pro</h2>
-
 <div class="dropzone" id="dropzone">
 Klik / Drag & Drop Image
 <input type="file" id="fileInput" multiple accept="image/*">
@@ -117,7 +62,11 @@ Klik / Drag & Drop Image
 <div id="preview"></div>
 
 </div>
+<footer></footer>
+<!--include:donate.html-->
 
+<script src="../asset/js/include.js"></script>
+<script src="../asset/js/donate.js"></script>
 <script>
 const dropzone = document.getElementById("dropzone");
 const fileInput = document.getElementById("fileInput");
