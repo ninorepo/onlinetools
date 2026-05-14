@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0">
+
+<title>Simple Image Editor</title>
+
+<style>
+*{
+    box-sizing:border-box;
+}
+
+body{
+    margin:0;
+    font-size:clamp(12px, 1.5vw, 17px);
+    font-family:Arial,sans-serif;
+    background:#111;
+    color:#eee;
+    display:flex;
+    flex-direction:column;
+    height:100vh;
+}
+
+header{
+    background:#1b1b1b;
+    border-bottom:1px solid #333;
+    padding:10px;
+}
+
+.steps{
+    display:flex;
+    gap:2px;
+    overflow:auto;
+}
+
+.step{
+    padding:8px;
+    text-align: center;
+    font-weight:800;
+    /*border-radius:999px;*/
+    background:#222;
+    border:1px solid #444;
+    white-space:nowrap;
+    user-select:none;
+    cursor:pointer;
+    opacity:.5;
+}
+
+.step.active{
+    opacity:1;
+    background:#4b7bec;
+    border-color:#4b7bec;
+}
+
+.step.enabled{
+    opacity:1;
+}
+
+.workspace{
+    flex:1;
+    overflow:auto;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    padding:10px;
+}
+
+.canvas-wrap{
+    position:relative;
+    background:#222;
+    /*border-radius:12px;*/
+    overflow:hidden;
+    max-width:100%;
+    max-height:100%;
+}
+
+/*canvas{
+    display:block;
+    max-width:100%;
+    max-height:75vh;
+}
+*/
+
+canvas {
+	display: block;
+}
+
+.crop-box{
+    position:absolute;
+    border:2px dashed #4b7bec;
+    cursor:move;
+    display:none;
+    touch-action:none;
+}
+
+#cropPanel {
+    padding-right: 20px;
+    padding-left: 20px; 
+}
+
+.panel{
+    background:#1b1b1b;
+    border-top:1px solid #333;
+    padding:12px;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+}
+
+.controls{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    align-items:center;
+}
+
+input,
+select,
+button{
+    padding:10px;
+    border:none;
+    border-radius:8px;
+    font-size:14px;
+}
+
+button{
+    cursor:pointer;
+}
+
+.primary{
+    background:#4b7bec;
+    color:white;
+}
+
+.secondary{
+    background:#333;
+    color:#eee;
+}
+
+.tip{
+    color:#aaa;
+    font-size:13px;
+    line-height:1.4;
+}
+
+.hidden{
+    display:none;
+}
+
+.big-upload{
+    padding:25px;
+    border:2px dashed #555;
+    border-radius:14px;
+    text-align:center;
+}
+
+.big-upload input{
+    margin-top:10px;
+}
+
+.info{
+    color:#aaa;
+    font-size:13px;
+    padding: 20px;
+}
+
+.range-wrap{
+    padding-top: 10px;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    width:100%;
+}
+
+input[type="range"]{
+    width:100%;
+    padding:0;
+}
+
+.zoom-bar{
+    padding-right: 30px;
+    padding-left: 30px;
+    padding-top: 10px;
+    background:#181818;
+    border-top:1px solid #333;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+}
+
+.zoom-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-size:14px;
+    color:#ccc;
+}
+
+#previewZoom{
+    width:100%;
+}
+
+.navbtn {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	height: 100px;
+	width:100%;
+	margin:0px;
+	padding:0px;
+}
+
+#width, #height {
+	width:20%;
+}
+
+</style>
+</head>
+
+<body>
+
+<header>
+
+    <div class="steps">
+
+        <div class="step active enabled"
+        data-step="0">
+		Langkah 1:<br>Upload
+        </div>
+
+        <div class="step"
+        data-step="1">
+            Langkah 2: <br>Crop
+        </div>
+
+        <div class="step"
+        data-step="2">
+            Langkah 3: <br>Resize
+        </div>
+
+        <div class="step"
+        data-step="3">
+            Langkah 4: <br>Download
+        </div>
+
+    </div>
+
+</header>
+
+<div class="workspace">
+
+    <div class="canvas-wrap">
+
+        <canvas id="canvas"></canvas>
+
+        <div class="crop-box"
+        id="cropBox"></div>
+
+    </div>
+
+</div>
+
+<div class="zoom-bar">
+
+    <label>
+        Zoom Layar [ <span id="zoomValue">100%</span> ] 
+    </label>
+
+    <input
+    type="range"
+    id="previewZoom"
+    min="25"
+    max="300"
+    value="100">
+
+</div>
+
+<div class="panel">
+
+    <!-- UPLOAD -->
+    <div id="uploadPanel">
+
+        <div class="big-upload">
+
+            <div>
+                Pilih Gambar Dahulu
+            </div>
+
+            <input type="file"
+            id="upload"
+            accept="image/*">
+
+        </div>
+
+    </div>
+
+    <!-- CROP -->
+    <div id="cropPanel"
+    class="hidden">
+
+        <div class="tip">
+            Pilih "Rasio Crop" disini, drag "Bingkai Crop" pada layar:
+        </div>
+
+        <div class="controls">
+
+            <select id="cropRatio">
+                <option value="none" selected>
+    			None
+		</option>
+		
+                <option value="1:1">
+                    1:1 Square
+                </option>
+
+                <option value="3:2">
+                    3:2 Photo
+                </option>
+
+                <option value="2:3">
+                    2:3 Portrait
+                </option>
+
+                <option value="4:3">
+                    4:3 Standard
+                </option>
+
+                <option value="3:4">
+                    3:4 Portrait
+                </option>
+
+                <option value="5:4">
+                    5:4 Frame
+                </option>
+
+                <option value="4:5">
+                    4:5 Instagram
+                </option>
+
+                <option value="7:5">
+                    7:5 Print
+                </option>
+
+                <option value="16:9">
+                    16:9 Widescreen
+                </option>
+
+                <option value="9:16">
+                    9:16 Story
+                </option>
+
+                <option value="21:9">
+                    21:9 Ultrawide
+                </option>
+
+                <option value="A4">
+                    A4 Paper
+                </option>
+
+                <option value="passport">
+                    Passport
+                </option>
+
+            </select>
+
+        </div>
+
+        <div class="range-wrap">
+
+            <label>
+                Ukuran Crop
+            </label>
+
+            <input
+            type="range"
+            id="cropScale"
+            min="10"
+            max="100"
+            value="70">
+
+        </div>
+
+    </div>
+
+    <!-- RESIZE -->
+    <div id="resizePanel" class="hidden">
+
+        <div class="controls">
+	    <span>L: </span>
+            <input type="number" id="width" placeholder="Width">
+	    <span>T: </span>
+	    <input type="number" id="height" placeholder="Height">
+	    <select id="unit">
+                <option value="px">px</option>
+                <option value="cm">cm</option>
+                <option value="mm">mm</option>
+            </select>
+
+	    <label>
+		<input type="checkbox" id="lock" checked>
+                Kunci Rasio
+            </label>
+
+        </div>
+
+        <div class="info" id="resizeInfo">
+        </div>
+
+    </div>
+
+    <!-- DOWNLOAD -->
+    <div id="downloadPanel"
+    class="hidden">
+
+        <button id="downloadBtn"
+        class="primary">
+            Download PNG
+        </button>
+
+        <div class="tip">
+	    Pastikan cetak dengan ukuran 100% agar mendapatkan ukuran yang akurat dan aktual.
+        </div>
+
+    </div>
+
+    <!-- NAV -->
+    <div class="controls navbtn">
+
+        <button id="backBtn"
+        class="secondary">
+            ← Kembali
+        </button>
+
+        <button id="nextBtn"
+        class="primary">
+            Lanjut →
+        </button>
+
+    </div>
+
+</div>
+
+<script>
+const DPI = 300;
+
+const steps =
+[...document.querySelectorAll(".step")];
+
+const panels = {
+    upload:
+    document.getElementById("uploadPanel"),
+
+    crop:
+    document.getElementById("cropPanel"),
+
+    resize:
+    document.getElementById("resizePanel"),
+
+    download:
+    document.getElementById("downloadPanel")
+};
+
+const canvas =document.getElementById("canvas");
+const ctx =canvas.getContext("2d");
+const cropBox =document.getElementById("cropBox");
+const upload =document.getElementById("upload");
+const widthInput =document.getElementById("width");
+const heightInput =document.getElementById("height");
+const unitInput =document.getElementById("unit");
+const lockInput =document.getElementById("lock");
+const resizeInfo =document.getElementById("resizeInfo");
+const backBtn =document.getElementById("backBtn");
+const nextBtn =document.getElementById("nextBtn");
+const cropRatioInput =document.getElementById("cropRatio");
+const cropScaleInput =document.getElementById("cropScale");
+const previewZoom = document.getElementById("previewZoom");
+const zoomValue = document.getElementById("zoomValue");
+
+let currentStep = 0;
+
+let enabledSteps = 1;
+
+let img = new Image();
+
+let ratio = 1;
+
+let crop = null;
+
+let cropRatio = 1;
+
+let cropScale = 0.7;
+
+let movingCrop = false;
+
+let moveOffsetX = 0;
+let moveOffsetY = 0;
+
+function toPx(v,u){
+
+    if(u==="px") return v;
+
+    if(u==="cm")
+        return (v/2.54)*DPI;
+
+    if(u==="mm")
+        return (v/25.4)*DPI;
+}
+
+function updateResizeInfo(){
+
+    const unit =
+    unitInput.value;
+
+    resizeInfo.innerText =
+    `Final size:
+    ${widthInput.value} ${unit}
+    ×
+    ${heightInput.value} ${unit}`;
+}
+
+function render(image){
+
+    canvas.width =
+    image.width;
+
+    canvas.height =
+    image.height;
+
+    ctx.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+    ctx.drawImage(
+        image,
+        0,
+        0
+    );
+
+    updateCropBox();
+}
+
+function setStep(index){
+
+    currentStep = index;
+
+    steps.forEach((s,i)=>{
+
+        s.classList.toggle(
+            "active",
+            i===index
+        );
+
+        s.classList.toggle(
+            "enabled",
+            i<enabledSteps
+        );
+    });
+
+    Object.values(panels)
+    .forEach(p=>p.classList.add("hidden"));
+
+    if(index===0)
+        panels.upload.classList.remove("hidden");
+
+    if(index===1)
+        panels.crop.classList.remove("hidden");
+
+    if(index===2)
+        panels.resize.classList.remove("hidden");
+    
+    if(index===3)
+        panels.download.classList.remove("hidden");
+
+    if(index !== 1)
+    {
+        cropRatioInput.value = "none";
+        crop = null;
+        cropBox.style.display ="none";
+    }
+    else
+    {
+        updateCropBox();
+    }
+
+
+    backBtn.style.visibility =
+    index===0
+    ? "hidden"
+    : "visible";
+
+    nextBtn.style.visibility =
+    index===3
+    ? "hidden"
+    : "visible";
+}
+
+function updatePreviewZoom(){
+
+    const value =
+    parseInt(previewZoom.value);
+
+    const zoom =
+    value / 100;
+
+    zoomValue.innerText =
+    value + "%";
+
+    canvas.style.width =
+    (canvas.width * zoom) + "px";
+
+    updateCropUI();
+}
+
+steps.forEach(step=>{
+
+    step.onclick = ()=>{
+
+        const target =
+        parseInt(step.dataset.step);
+
+        if(target >= enabledSteps)
+            return;
+
+        //applyCurrentStep();
+
+        setStep(target);
+    };
+});
+
+backBtn.onclick = ()=>{
+
+    //applyCurrentStep();
+
+    if(currentStep>0){
+
+        setStep(currentStep-1);
+    }
+};
+
+nextBtn.onclick = ()=>{
+
+    applyCurrentStep();
+
+    if(currentStep<3){
+
+        enabledSteps =
+        Math.max(
+            enabledSteps,
+            currentStep+2
+        );
+
+        setStep(currentStep+1);
+    }
+};
+
+function getRatio(v){
+
+    if(v === "none")
+        return null;
+
+    if(v === "A4")
+        return 210 / 297;
+
+    if(v === "passport")
+        return 35 / 45;
+
+    const p = v.split(":");
+
+    return (
+        parseFloat(p[0]) /
+        parseFloat(p[1])
+    );
+}
+
+function updateCropBox(){
+
+    if(!canvas.width)
+        return;
+    if(cropRatioInput.value === "none")
+    {
+    	crop = null;
+    	cropBox.style.display ="none";
+        return;
+    }
+
+    cropRatio =
+    getRatio(
+        cropRatioInput.value
+    );
+
+    cropScale =
+    cropScaleInput.value / 100;
+
+    let w =
+    canvas.width * cropScale;
+
+    let h =
+    w / cropRatio;
+
+    if(h > canvas.height){
+
+        h =
+        canvas.height * cropScale;
+
+        w =
+        h * cropRatio;
+    }
+
+    const x =
+    (canvas.width - w) / 2;
+
+    const y =
+    (canvas.height - h) / 2;
+
+    crop = {x,y,w,h};
+
+    updateCropUI();
+}
+
+function updateCropUI(){
+
+    if(!crop) return;
+
+    cropBox.style.display =
+    "block";
+
+    const scaleX =
+    canvas.clientWidth /
+    canvas.width;
+
+    const scaleY =
+    canvas.clientHeight /
+    canvas.height;
+
+    cropBox.style.left =
+    (crop.x * scaleX) + "px";
+
+    cropBox.style.top =
+    (crop.y * scaleY) + "px";
+
+    cropBox.style.width =
+    (crop.w * scaleX) + "px";
+
+    cropBox.style.height =
+    (crop.h * scaleY) + "px";
+}
+
+function syncInputs(){
+
+    const unit = unitInput.value;
+
+    let w = canvas.width;
+    let h = canvas.height;
+
+    if(unit === "cm"){
+        w = w / DPI * 2.54;
+        h = h / DPI * 2.54;
+    }
+
+    if(unit === "mm"){
+        w = w / DPI * 25.4;
+        h = h / DPI * 25.4;
+    }
+
+    widthInput.value = w.toFixed(2);
+    heightInput.value = h.toFixed(2);
+}
+
+previewZoom.oninput = updatePreviewZoom;
+cropRatioInput.onchange =updateCropBox;
+cropScaleInput.oninput =updateCropBox;
+
+upload.onchange = e => {
+
+    const file =
+    e.target.files[0];
+
+    if(!file) return;
+
+    const reader =
+    new FileReader();
+
+    reader.onload = ev => {
+
+        img = new Image();
+
+        img.onload = ()=>{
+
+            ratio =
+            img.width / img.height;
+
+            widthInput.value = img.width;
+            heightInput.value = img.height;
+
+            updateResizeInfo();
+
+            render(img);
+	    previewZoom.value = 100;
+	    updatePreviewZoom();
+
+            enabledSteps = 4;
+
+            setStep(1);
+        };
+
+        img.src =
+        ev.target.result;
+    };
+
+    reader.readAsDataURL(file);
+};
+
+function previewResize(){
+
+    if(currentStep !== 2)
+        return;
+
+    const w =
+    toPx(
+        parseFloat(widthInput.value),
+        unitInput.value
+    );
+
+    const h =
+    toPx(
+        parseFloat(heightInput.value),
+        unitInput.value
+    );
+
+    canvas.width = w;
+    canvas.height = h;
+
+    ctx.clearRect(
+        0,
+        0,
+        w,
+        h
+    );
+
+    ctx.drawImage(
+        img,
+        0,
+        0,
+        w,
+        h
+    );
+}
+
+widthInput.oninput = ()=>{
+
+    if(lockInput.checked){
+
+        heightInput.value =
+        (
+            widthInput.value
+            / ratio
+        ).toFixed(2);
+    }
+
+    updateResizeInfo();
+
+    previewResize();
+};
+
+heightInput.oninput = ()=>{
+
+    if(lockInput.checked){
+
+        widthInput.value =
+        (
+            heightInput.value
+            * ratio
+        ).toFixed(2);
+    }
+
+    updateResizeInfo();
+
+    previewResize();
+};
+
+unitInput.onchange = ()=>{
+	syncInputs();
+    updateResizeInfo();
+    previewResize();
+};
+
+function applyCrop(){
+
+    if(!crop) return;
+
+    const temp =
+    document.createElement("canvas");
+
+    const tctx =
+    temp.getContext("2d");
+
+    temp.width = crop.w;
+    temp.height = crop.h;
+
+    tctx.drawImage(
+        canvas,
+        crop.x,
+        crop.y,
+        crop.w,
+        crop.h,
+        0,
+        0,
+        crop.w,
+        crop.h
+    );
+
+    const newImg =
+    new Image();
+
+    newImg.onload = ()=>{
+
+        img = newImg;
+
+        ratio =
+        img.width / img.height;
+
+        render(img);
+
+        /* HIDE OLD BOX */
+
+        cropBox.style.display =
+        "none";
+
+        /* RESET CROP STATE */
+
+        crop = null;
+
+        /* REBUILD NEW CROP BOX */
+
+        requestAnimationFrame(()=>{
+
+            updateCropBox();
+        });
+    };
+
+    newImg.src =
+    temp.toDataURL();
+}
+
+function applyResize(){
+
+    const w =
+    toPx(
+        parseFloat(widthInput.value),
+        unitInput.value
+    );
+
+    const h =
+    toPx(
+        parseFloat(heightInput.value),
+        unitInput.value
+    );
+
+    const temp =
+    document.createElement("canvas");
+
+    temp.width = w;
+    temp.height = h;
+
+    const tctx =
+    temp.getContext("2d");
+
+    tctx.drawImage(
+        img,
+        0,
+        0,
+        w,
+        h
+    );
+
+    const newImg =
+    new Image();
+
+    newImg.onload = ()=>{
+
+        img = newImg;
+
+        ratio =
+        img.width / img.height;
+
+        render(img);
+    };
+
+    newImg.src =
+    temp.toDataURL();
+}
+
+function applyCurrentStep(){
+
+    if(currentStep===1)
+        applyCrop();
+
+    if(currentStep===2)
+        applyResize();
+}
+
+cropBox.addEventListener(
+"pointerdown",
+e=>{
+
+    movingCrop = true;
+
+    const rect =
+    cropBox.getBoundingClientRect();
+
+    moveOffsetX =
+    e.clientX - rect.left;
+
+    moveOffsetY =
+    e.clientY - rect.top;
+
+    e.stopPropagation();
+});
+
+window.addEventListener(
+"pointermove",
+e=>{
+
+    if(!movingCrop)
+        return;
+
+    const rect =
+    canvas.getBoundingClientRect();
+
+    const scaleX =
+    canvas.width /
+    rect.width;
+
+    const scaleY =
+    canvas.height /
+    rect.height;
+
+    let x =
+    (
+        e.clientX -
+        rect.left -
+        moveOffsetX
+    ) * scaleX;
+
+    let y =
+    (
+        e.clientY -
+        rect.top -
+        moveOffsetY
+    ) * scaleY;
+
+    x =
+    Math.max(
+        0,
+        Math.min(
+            x,
+            canvas.width -
+            crop.w
+        )
+    );
+
+    y =
+    Math.max(
+        0,
+        Math.min(
+            y,
+            canvas.height -
+            crop.h
+        )
+    );
+
+    crop.x = x;
+    crop.y = y;
+
+    updateCropUI();
+});
+
+window.addEventListener(
+"pointerup",
+()=>{
+
+    movingCrop = false;
+});
+
+document.getElementById("downloadBtn").onclick = ()=>{
+    canvas.toBlob(blob=>{
+
+        const url =
+        URL.createObjectURL(blob);
+
+        const a =
+        document.createElement("a");
+
+        a.href = url;
+
+        a.download = "image.png";
+
+        document.body.appendChild(a);
+
+        a.click();
+
+        a.remove();
+
+        URL.revokeObjectURL(url);
+
+    }, "image/png");
+};
+
+setStep(0);
+</script>
+
+</body>
+</html>
+
