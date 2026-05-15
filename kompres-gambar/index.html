@@ -107,20 +107,29 @@ dropzone.ondrop = e => {
 /* =========================
    FORMAT DETECTION (AUTO)
 ========================= */
-function getMime(type) {
-  if (type.includes("png")) return "image/png";
-  if (type.includes("webp")) return "image/webp";
-  if (type.includes("jpeg") || type.includes("jpg")) return "image/jpeg";
 
-  return "image/jpeg"; // fallback
+function getMime(type) {
+
+  // use browser mime directly
+  if (type && type.startsWith("image/")) {
+    return type;
+  }
+
+  // safe fallback
+  return "image/jpeg";
 }
 
-function getExt(type) {
-  if (type.includes("png")) return "png";
-  if (type.includes("webp")) return "webp";
-  if (type.includes("jpeg") || type.includes("jpg")) return "jpg";
+function getExt(filename, mime) {
 
-  return "jpg";
+  // keep original extension if possible
+  const parts = filename.split(".");
+
+  if (parts.length > 1) {
+    return parts.pop().toLowerCase();
+  }
+
+  // fallback from mime
+  return mime.split("/")[1] || "jpg";
 }
 
 /* =========================
@@ -144,55 +153,117 @@ function handleFiles(files) {
   }
 }
 
-/* =========================
-   COMPRESS CORE
-========================= */
-function compress(imgSrc, quality, scale, mime, cb) {
+function forceJpeg(imgSrc, quality, scale, cb) {
   const img = new Image();
   img.src = imgSrc;
 
   img.onload = () => {
     const canvas = document.createElement("canvas");
-    canvas.width = img.width * scale;
-    canvas.height = img.height * scale;
+
+    canvas.width = Math.round(img.width * scale);
+    canvas.height = Math.round(img.height * scale);
 
     const ctx = canvas.getContext("2d");
+
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
     canvas.toBlob(blob => {
       cb(URL.createObjectURL(blob), blob);
-    }, mime, quality);
+    }, "image/jpeg", quality);
   };
 }
+
+/* =========================
+   COMPRESS CORE
+========================= */
+function compress(imgSrc, quality, scale, mime, cb) {
+
+  const img = new Image();
+  img.src = imgSrc;
+
+  img.onload = async () => {
+  await img.decode().catch(() => {});
+
+    const canvas = document.createElement("canvas");
+
+    canvas.width = Math.round(img.width * scale);
+    canvas.height = Math.round(img.height * scale);
+
+    const ctx = canvas.getContext("2d");
+
+    // preserve transparency
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    // PNG ignores quality
+    const useQuality =
+      mime !== "image/png";
+
+    canvas.toBlob(
+
+      blob => {
+        cb(URL.createObjectURL(blob), blob);
+      },
+
+      mime,
+
+      useQuality ? quality : undefined
+
+    );
+  };
+}
+
 
 /* =========================
    TARGET SIZE MODE
 ========================= */
 function compressTarget(imgSrc, targetKB, scale, mime, cb) {
-  const img = new Image();
-  img.src = imgSrc;
 
-  img.onload = () => {
-    let q = 0.9;
+  const img = new Image();
+img.src = imgSrc;
+
+img.onload = async () => {
+  await img.decode().catch(() => {});
+
+    let q = 0.92;
+
+    const canvas = document.createElement("canvas");
+
+    canvas.width = Math.round(img.width * scale);
+    canvas.height = Math.round(img.height * scale);
+
+    const ctx = canvas.getContext("2d");
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    const useQuality =
+      mime !== "image/png";
 
     const run = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = img.width * scale;
-      canvas.height = img.height * scale;
-
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
       canvas.toBlob(blob => {
+
         const size = blob.size / 1024;
 
-        if (size > targetKB && q > 0.1) {
+        if (
+          useQuality &&
+          size > targetKB &&
+          q > 0.1
+        ) {
+
           q -= 0.05;
           run();
+
         } else {
+
           cb(URL.createObjectURL(blob), blob);
+
         }
-      }, mime, q);
+
+      }, mime, useQuality ? q : undefined);
+
     };
 
     run();
@@ -211,17 +282,23 @@ function render() {
   filesData.forEach(item => {
 
     const mime = getMime(item.type);
-    const ext = getExt(item.type);
+    const ext = getExt(item.name, mime)
 
     const card = document.createElement("div");
     card.className = "card";
 
-    card.innerHTML = `
-      <img src="${item.src}">
-      <div class="small">Original: ${(item.file.size/1024).toFixed(1)} KB</div>
-      <div class="status">Processing...</div>
-      <button>Download</button>
-    `;
+card.innerHTML = `
+  <img src="${item.src}">
+  <div class="small">Original: ${(item.file.size/1024).toFixed(1)} KB</div>
+
+  <div class="status">Processing...</div>
+
+  <div class="hint" style="display:none; font-size:12px; opacity:0.7;">
+    Kompresi tidak efektif, output otomatis diubah ke JPG sebagai alternatif
+  </div>
+
+  <button>Download</button>
+`;
 
     preview.appendChild(card);
 
@@ -231,19 +308,60 @@ function render() {
     if (mode === "manual") {
 
       const q = qualityEl.value / 100;
+compress(item.src, q, scale, mime, (url, blob) => {
 
-      compress(item.src, q, scale, mime, (url, blob) => {
-        status.innerHTML = `Compressed: ${(blob.size/1024).toFixed(2)} KB`;
+  const originalSize = item.file.size;
+  const newSize = blob.size;
 
-        const name = "compressed_" + item.name.split(".")[0] + "." + ext;
+  const isBadResult =
+    !blob ||
+    newSize >= originalSize * 0.98 || // not smaller enough
+    newSize === 0;
 
-        btn.onclick = () => {
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = name;
-          a.click();
-        };
-      });
+  if (isBadResult) {
+
+    status.innerHTML = "Untuk format ini, hanya efektif jika dikompresi menjadi JPG";
+    card.querySelector(".hint").style.display = "block";
+
+    forceJpeg(item.src, 0.85, scale, (jpgUrl, jpgBlob) => {
+
+      status.innerHTML =
+        `Fallback JPG: ${(jpgBlob.size / 1024).toFixed(2)} KB`;
+
+      const name =
+        "compressed_" +
+        item.name.split(".")[0] +
+        ".jpg";
+
+      btn.onclick = () => {
+        const a = document.createElement("a");
+        a.href = jpgUrl;
+        a.download = name;
+        a.click();
+      };
+    });
+
+    return;
+  }
+
+  // normal success
+  status.innerHTML =
+    `Compressed: ${(blob.size / 1024).toFixed(2)} KB`;
+
+  const name =
+    "compressed_" +
+    item.name.split(".")[0] +
+    "." + ext;
+
+  btn.onclick = () => {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    a.click();
+  };
+
+});
+
 
     } else {
 
