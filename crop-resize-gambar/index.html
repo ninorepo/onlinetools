@@ -67,6 +67,10 @@ header{
 	overflow: hidden;
 }
 
+.ui-wrapper-init {
+	height:auto !important;
+}
+
 .ui1 {
     flex: 2;
     margin: 5px;
@@ -94,12 +98,17 @@ canvas {
 	display: block;
 }
 
+.hidden{
+    display:none !important;
+}
+
 .crop-box{
     position:absolute;
     border:2px dashed #4b7bec;
     cursor:move;
     display:none;
     touch-action:none;
+    pointer-events: none;
 }
 
 #cropPanel {
@@ -117,10 +126,14 @@ canvas {
 }
 
 .controls{
-    display:flex;
+    display:block;
     flex-wrap:wrap;
     gap:10px;
     align-items:center;
+}
+
+.controls label {
+	display:block;
 }
 
 input,
@@ -219,6 +232,13 @@ input[type="range"]{
 	padding:0px;
 }
 
+canvas{
+    display:block;
+    max-width:100%;
+    max-height:100%;
+    touch-action:none;
+}
+
 #width, #height {
 	width:20%;
 }
@@ -308,7 +328,6 @@ input[type="range"]{
     <div class="canvas-wrap">
 
         <canvas id="canvas"></canvas>
-
         <div class="crop-box"
         id="cropBox"></div>
 
@@ -324,7 +343,7 @@ input[type="range"]{
     <input
     type="range"
     id="previewZoom"
-    min="25"
+    min="-100"
     max="300"
     value="100">
 
@@ -352,19 +371,17 @@ input[type="range"]{
     <!-- CROP -->
     <div id="cropPanel"
     class="hidden">
-
-        <div class="tip">
-            Tips: Drag "Bingkai Crop" pada layar:
-        </div>
-
         <div class="controls">
 
+        <label for="cropRatio">
+		Bingkai Crop
+	</label>
             <select id="cropRatio">
-                <option value="none" selected>
-    			Crop Ratio
+                <option value="none">
+    			None
 		</option>
 		
-                <option value="1:1">
+                <option value="1:1" selected>
                     1:1 Square
                 </option>
 
@@ -429,9 +446,9 @@ input[type="range"]{
             <input
             type="range"
             id="cropScale"
-            min="10"
+            min="1"
             max="100"
-            value="70">
+            value="50">
 
         </div>
 
@@ -503,6 +520,8 @@ input[type="range"]{
 <script src="../asset/js/donate.js"></script>
 <script>
 const DPI = 300;
+const VIEW_W = 900;
+const VIEW_H = 700;
 
 const steps =
 [...document.querySelectorAll(".step")];
@@ -555,6 +574,19 @@ let movingCrop = false;
 
 let moveOffsetX = 0;
 let moveOffsetY = 0;
+let imgOffsetX = 0;
+let imgOffsetY = 0;
+let imgScale = 1;
+
+let draggingImage = false;
+let dragStartX = 0;
+let dragStartY = 0;
+
+document.querySelector(".zoom-bar").classList.add("hidden");
+document.querySelector(".navbtn").classList.add("hidden");
+document.querySelector(".canvas-wrap").classList.add("hidden");
+document.querySelector(".ui1").classList.add("hidden");
+document.querySelector(".ui-wrapper").classList.add("ui-wrapper-init");
 
 function toPx(v,u){
 
@@ -566,6 +598,7 @@ function toPx(v,u){
     if(u==="mm")
         return (v/25.4)*DPI;
 }
+
 
 function updateResizeInfo(){
 
@@ -579,13 +612,10 @@ function updateResizeInfo(){
     ${heightInput.value} ${unit}`;
 }
 
-function render(image){
+function render(){
 
-    canvas.width =
-    image.width;
-
-    canvas.height =
-    image.height;
+    canvas.width = VIEW_W;
+    canvas.height = VIEW_H;
 
     ctx.clearRect(
         0,
@@ -594,14 +624,34 @@ function render(image){
         canvas.height
     );
 
-    ctx.drawImage(
-        image,
+    ctx.fillStyle = "#222";
+    ctx.fillRect(
         0,
-        0
+        0,
+        canvas.width,
+        canvas.height
     );
 
-    updateCropBox();
+    if(!img.width)
+        return;
+
+    const drawW =
+    img.width * imgScale;
+
+    const drawH =
+    img.height * imgScale;
+
+    ctx.drawImage(
+        img,
+        imgOffsetX,
+        imgOffsetY,
+        drawW,
+        drawH
+    );
+
+    updateCropUI();
 }
+
 
 function setStep(index){
 
@@ -637,7 +687,7 @@ function setStep(index){
 
     if(index !== 1)
     {
-        cropRatioInput.value = "none";
+        //cropRatioInput.value = "none";
         crop = null;
         cropBox.style.display ="none";
     }
@@ -660,20 +710,40 @@ function setStep(index){
 
 function updatePreviewZoom(){
 
+    const oldScale =
+    imgScale;
+
     const value =
     parseInt(previewZoom.value);
-
-    const zoom =
-    value / 100;
 
     zoomValue.innerText =
     value + "%";
 
-    canvas.style.width =
-    (canvas.width * zoom) + "px";
+    const newScale = Math.pow(2, (value - 100) / 50);
 
-    updateCropUI();
+
+    const centerX =
+    canvas.width / 2;
+
+    const centerY =
+    canvas.height / 2;
+
+    imgOffsetX =
+    centerX -
+    ((centerX - imgOffsetX)
+    * (newScale / oldScale));
+
+    imgOffsetY =
+    centerY -
+    ((centerY - imgOffsetY)
+    * (newScale / oldScale));
+
+    imgScale = newScale;
+
+    render();
 }
+
+
 
 steps.forEach(step=>{
 
@@ -738,12 +808,9 @@ function getRatio(v){
 
 function updateCropBox(){
 
-    if(!canvas.width)
-        return;
-    if(cropRatioInput.value === "none")
-    {
-    	crop = null;
-    	cropBox.style.display ="none";
+    if(cropRatioInput.value === "none"){
+        crop = null;
+        cropBox.style.display = "none";
         return;
     }
 
@@ -770,13 +837,12 @@ function updateCropBox(){
         h * cropRatio;
     }
 
-    const x =
-    (canvas.width - w) / 2;
-
-    const y =
-    (canvas.height - h) / 2;
-
-    crop = {x,y,w,h};
+    crop = {
+        x:(canvas.width - w)/2,
+        y:(canvas.height - h)/2,
+        w,
+        h
+    };
 
     updateCropUI();
 }
@@ -785,8 +851,7 @@ function updateCropUI(){
 
     if(!crop) return;
 
-    cropBox.style.display =
-    "block";
+    cropBox.style.display = "block";
 
     const scaleX =
     canvas.clientWidth /
@@ -850,14 +915,20 @@ upload.onchange = e => {
 
         img.onload = ()=>{
 
-            ratio =
-            img.width / img.height;
+            ratio = img.width / img.height;
+		const scaleX = VIEW_W / img.width;
+		const scaleY = VIEW_H / img.height;
+		imgScale = Math.min(scaleX, scaleY);
+		const drawW = img.width * imgScale;
+		const drawH = img.height * imgScale;
+		imgOffsetX = (VIEW_W - drawW) / 2;
+		imgOffsetY = (VIEW_H - drawH) / 2;
 
             widthInput.value = img.width;
             heightInput.value = img.height;
 
             //updateResizeInfo();
-
+	    showEditor();
             render(img);
 	    previewZoom.value = 100;
 	    updatePreviewZoom();
@@ -955,18 +1026,30 @@ function applyCrop(){
     const temp =
     document.createElement("canvas");
 
-    const tctx =
-    temp.getContext("2d");
-
     temp.width = crop.w;
     temp.height = crop.h;
 
+    const tctx =
+    temp.getContext("2d");
+
+    const sourceX =
+    (crop.x - imgOffsetX) / imgScale;
+
+    const sourceY =
+    (crop.y - imgOffsetY) / imgScale;
+
+    const sourceW =
+    crop.w / imgScale;
+
+    const sourceH =
+    crop.h / imgScale;
+
     tctx.drawImage(
-        canvas,
-        crop.x,
-        crop.y,
-        crop.w,
-        crop.h,
+        img,
+        sourceX,
+        sourceY,
+        sourceW,
+        sourceH,
         0,
         0,
         crop.w,
@@ -983,28 +1066,35 @@ function applyCrop(){
         ratio =
         img.width / img.height;
 
-        render(img);
+        const scaleX =
+        VIEW_W / img.width;
 
-        /* HIDE OLD BOX */
+        const scaleY =
+        VIEW_H / img.height;
 
-        cropBox.style.display =
-        "none";
+        imgScale =
+        Math.min(scaleX, scaleY);
 
-        /* RESET CROP STATE */
+        const drawW =
+        img.width * imgScale;
 
-        crop = null;
+        const drawH =
+        img.height * imgScale;
 
-        /* REBUILD NEW CROP BOX */
+        imgOffsetX =
+        (VIEW_W - drawW) / 2;
 
-        requestAnimationFrame(()=>{
+        imgOffsetY =
+        (VIEW_H - drawH) / 2;
 
-            updateCropBox();
-        });
+        render();
     };
 
     newImg.src =
     temp.toDataURL();
 }
+
+
 
 function applyResize(){
 
@@ -1063,88 +1153,120 @@ function applyCurrentStep(){
         applyResize();
 }
 
-cropBox.addEventListener(
+canvas.style.touchAction = "none";
+
+let startPointerX = 0;
+let startPointerY = 0;
+
+let startOffsetX = 0;
+let startOffsetY = 0;
+
+canvas.addEventListener(
 "pointerdown",
 e=>{
 
-    movingCrop = true;
+    draggingImage = true;
 
     const rect =
-    cropBox.getBoundingClientRect();
+    canvas.getBoundingClientRect();
 
-    moveOffsetX =
-    e.clientX - rect.left;
+    startPointerX =
+    (e.clientX - rect.left)
+    * (canvas.width / rect.width);
 
-    moveOffsetY =
-    e.clientY - rect.top;
+    startPointerY =
+    (e.clientY - rect.top)
+    * (canvas.height / rect.height);
 
-    e.stopPropagation();
+    startOffsetX = imgOffsetX;
+    startOffsetY = imgOffsetY;
+
+    canvas.setPointerCapture(e.pointerId);
 });
 
-window.addEventListener(
+
+canvas.addEventListener(
 "pointermove",
 e=>{
 
-    if(!movingCrop)
+    if(!draggingImage)
         return;
 
     const rect =
     canvas.getBoundingClientRect();
 
-    const scaleX =
-    canvas.width /
-    rect.width;
+    // convert screen → canvas space (IMPORTANT)
+    const x =
+    (e.clientX - rect.left)
+    * (canvas.width / rect.width);
 
-    const scaleY =
-    canvas.height /
-    rect.height;
+    const y =
+    (e.clientY - rect.top)
+    * (canvas.height / rect.height);
 
-    let x =
-    (
-        e.clientX -
-        rect.left -
-        moveOffsetX
-    ) * scaleX;
+    const startX =
+    startPointerX;
 
-    let y =
-    (
-        e.clientY -
-        rect.top -
-        moveOffsetY
-    ) * scaleY;
+    const startY =
+    startPointerY;
 
-    x =
-    Math.max(
-        0,
-        Math.min(
-            x,
-            canvas.width -
-            crop.w
-        )
-    );
+    const dx = x - startX;
+    const dy = y - startY;
 
-    y =
-    Math.max(
-        0,
-        Math.min(
-            y,
-            canvas.height -
-            crop.h
-        )
-    );
+    imgOffsetX = startOffsetX + dx;
+    imgOffsetY = startOffsetY + dy;
 
-    crop.x = x;
-    crop.y = y;
-
-    updateCropUI();
+    render();
 });
 
-window.addEventListener(
+
+canvas.addEventListener(
 "pointerup",
+e=>{
+
+    draggingImage = false;
+
+    canvas.releasePointerCapture(
+        e.pointerId
+    );
+});
+
+canvas.addEventListener(
+"pointercancel",
 ()=>{
 
-    movingCrop = false;
+    draggingImage = false;
 });
+
+
+canvas.addEventListener(
+"wheel",
+e=>{
+
+    e.preventDefault();
+
+    let value =
+    parseInt(previewZoom.value);
+
+    value +=
+    e.deltaY > 0
+    ? -5
+    : 5;
+
+    value =
+    Math.max(
+        25,
+        Math.min(300, value)
+    );
+
+    previewZoom.value =
+    value;
+
+    updatePreviewZoom();
+
+},
+{ passive:false });
+
 
 document.getElementById("downloadBtn").onclick = ()=>{
     canvas.toBlob(blob=>{
@@ -1169,6 +1291,14 @@ document.getElementById("downloadBtn").onclick = ()=>{
 
     }, "image/png");
 };
+
+function showEditor(){
+    document.querySelector(".zoom-bar").classList.remove("hidden");
+    document.querySelector(".navbtn").classList.remove("hidden");
+    document.querySelector(".canvas-wrap").classList.remove("hidden");
+    document.querySelector(".ui1").classList.remove("hidden");
+    document.querySelector(".ui-wrapper").classList.remove("ui-wrapper-init");
+}
 
 setStep(0);
 </script>
