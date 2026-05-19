@@ -337,7 +337,7 @@ function updateTransform() {
 
 
 function setZoom(newScale) {
-  scale = Math.min(3, Math.max(0.5, newScale));
+  scale = Math.min(10, Math.max(0.01, newScale));
   zoomSlider.value = scale;
   updateTransform();
 }
