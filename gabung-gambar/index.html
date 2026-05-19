@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Stable Canvas Collage Maker</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Roboto:wght@400;700&family=Montserrat:wght@400;700&family=Pacifico&family=Oswald:wght@400;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+
+<style>
+
+*{
+    box-sizing:border-box;
+}
+
+body{
+    margin:0;
+    background:#111;
+    color:white;
+    font-family:Inter,sans-serif;
+}
+
+.app{
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+}
+
+.steps{
+    display:flex;
+    gap:6px;
+    padding:10px;
+    background:#151515;
+}
+
+.step{
+    flex:1;
+    text-align:center;
+    padding:10px;
+    background:#222;
+    border-radius:8px;
+}
+
+.step.active{
+    background:#00aaff;
+    color:black;
+}
+
+.toolbar{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:center;
+    align-items:center;
+    gap:10px;
+    padding:12px;
+    background:#1b1b1b;
+    border-bottom:1px solid #333;
+}
+
+button,select,input{
+    padding:8px;
+    border:none;
+    border-radius:8px;
+    background:#2a2a2a;
+    color:white;
+}
+
+.workspace{
+    flex:1;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    padding:10px;
+    overflow:hidden;
+}
+
+#preview{
+    width:min(90vw,90vh);
+    aspect-ratio:1/1;
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:6px;
+}
+
+#preview img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    border-radius:6px;
+}
+
+#canvasWrap{
+    width:min(90vw,90vh);
+    height:min(90vw,90vh);
+    display:none;
+    justify-content:center;
+    align-items:center;
+}
+
+canvas{
+    width:100%;
+    height:100%;
+    background:white;
+    border-radius:8px;
+    touch-action:none;
+}
+
+</style>
+</head>
+<body>
+
+<div class="app">
+
+<div class="steps">
+    <div class="step active" id="s1">1 Upload</div>
+    <div class="step" id="s2">2 Layout</div>
+    <div class="step" id="s3">3 Text</div>
+    <div class="step" id="s4">4 Export</div>
+</div>
+
+<div class="toolbar" id="toolbar"></div>
+
+<div class="workspace">
+
+    <div id="preview"></div>
+
+    <div id="canvasWrap">
+        <canvas id="canvas" width="2000" height="2000"></canvas>
+    </div>
+
+</div>
+
+</div>
+
+<script>
+
+const toolbar = document.getElementById("toolbar");
+const preview = document.getElementById("preview");
+
+const canvasWrap = document.getElementById("canvasWrap");
+
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+let step = 1;
+
+const state = {
+
+    bg:"#ffffff",
+
+    gap:8,
+
+    layout:"2x2",
+
+    fit:"cover",
+
+    images:[],
+
+    texts:[]
+};
+
+let selectedText = null;
+
+let draggingText = null;
+let dragDX = 0;
+let dragDY = 0;
+
+/* =========================
+   LAYOUTS
+========================= */
+const layouts = {
+
+    "2x2":{
+        cols:2,
+        rows:2,
+        items:[
+            [0,0,1,1],
+            [1,0,1,1],
+            [0,1,1,1],
+            [1,1,1,1]
+        ]
+    },
+
+    "3x3":{
+        cols:3,
+        rows:3,
+        items:[
+            [0,0,1,1],[1,0,1,1],[2,0,1,1],
+            [0,1,1,1],[1,1,1,1],[2,1,1,1],
+            [0,2,1,1],[1,2,1,1],[2,2,1,1]
+        ]
+    },
+
+    "2v":{
+        cols:2,
+        rows:1,
+        items:[
+            [0,0,1,1],
+            [1,0,1,1]
+        ]
+    },
+
+    "2h":{
+        cols:1,
+        rows:2,
+        items:[
+            [0,0,1,1],
+            [0,1,1,1]
+        ]
+    },
+
+    "main":{
+        cols:3,
+        rows:2,
+        items:[
+            [0,0,2,2],
+            [2,0,1,1],
+            [2,1,1,1]
+        ]
+    },
+
+    "stripe":{
+        cols:4,
+        rows:1,
+        items:[
+            [0,0,1,1],
+            [1,0,1,1],
+            [2,0,1,1],
+            [3,0,1,1]
+        ]
+    },
+
+    "vertical3":{
+        cols:1,
+        rows:3,
+        items:[
+            [0,0,1,1],
+            [0,1,1,1],
+            [0,2,1,1]
+        ]
+    },
+
+    "grid6":{
+        cols:3,
+        rows:2,
+        items:[
+            [0,0,1,1],[1,0,1,1],[2,0,1,1],
+            [0,1,1,1],[1,1,1,1],[2,1,1,1]
+        ]
+    }
+};
+
+/* =========================
+   STEP UI
+========================= */
+
+function updateSteps(){
+
+    document.querySelectorAll(".step")
+    .forEach(e=>e.classList.remove("active"));
+
+    document.getElementById("s"+step)
+    .classList.add("active");
+}
+
+function renderUI(){
+
+    updateSteps();
+
+    toolbar.innerHTML = "";
+
+    preview.style.display =
+        step===1 ? "grid" : "none";
+
+    canvasWrap.style.display =
+        step===1 ? "none" : "flex";
+
+    /* STEP 1 */
+
+    if(step===1){
+
+        toolbar.innerHTML = `
+        <input type="file" id="up"
+               multiple accept="image/*">
+
+        <button onclick="nextStep()">
+        Next
+        </button>
+        `;
+
+        document.getElementById("up")
+        .onchange = loadImages;
+    }
+
+    /* STEP 2 */
+
+    if(step===2){
+
+        toolbar.innerHTML = `
+
+        <select id="layout">
+
+            <option value="2x2">2x2</option>
+            <option value="3x3">3x3</option>
+            <option value="2v">2 Vertical</option>
+            <option value="2h">2 Horizontal</option>
+            <option value="main">Main</option>
+            <option value="stripe">Stripe</option>
+            <option value="vertical3">Vertical 3</option>
+            <option value="grid6">Grid 6</option>
+
+        </select>
+
+        <select id="fit">
+            <option value="cover">Cover</option>
+            <option value="contain">Contain</option> 
+        </select>
+
+        <input type="color"
+               id="bg"
+               value="#ffffff">
+
+        <input type="range"
+               id="gap"
+               min="0"
+               max="60"
+               value="8">
+
+        <button onclick="nextStep()">
+        Next
+        </button>
+
+        <button onclick="prevStep()">
+        Back
+        </button>
+        `;
+
+        document.getElementById("layout")
+        .onchange = e=>{
+            state.layout = e.target.value;
+            drawCanvas();
+        };
+
+        document.getElementById("fit")
+        .onchange = e=>{
+            state.fit = e.target.value;
+            drawCanvas();
+        };
+
+        document.getElementById("bg")
+        .oninput = e=>{
+            state.bg = e.target.value;
+            drawCanvas();
+        };
+
+        document.getElementById("gap")
+        .oninput = e=>{
+            state.gap = parseInt(e.target.value);
+            drawCanvas();
+        };
+
+        drawCanvas();
+    }
+
+    /* STEP 3 */
+
+    if(step===3){
+
+        toolbar.innerHTML = `
+
+        <button onclick="addText()">
+        Add Text
+        </button>
+
+        <input
+        type="text"
+        id="textInput"
+        placeholder="Type text here">
+
+        <select onchange="setFont(this.value)">
+            <option value="Inter">Inter</option>
+            <option value="Roboto">Roboto</option>
+            <option value="Montserrat">Montserrat</option>
+            <option value="Pacifico">Pacifico</option>
+            <option value="Oswald">Oswald</option>
+            <option value="Playfair Display">Playfair</option>
+        </select>
+
+        <input type="color"
+               onchange="setColor(this.value)">
+
+        <input type="number"
+               value="40"
+               onchange="setSize(this.value)">
+
+        <button onclick="deleteText()">
+        Delete
+        </button>
+
+        <button onclick="nextStep()">
+        Next
+        </button>
+
+        <button onclick="prevStep()">
+        Back
+        </button>
+        `;
+
+        drawCanvas();
+    }
+
+    /* STEP 4 */
+
+    if(step===4){
+
+        toolbar.innerHTML = `
+
+        <button onclick="downloadImage()">
+        Download
+        </button>
+
+        <button onclick="prevStep()">
+        Back
+        </button>
+        `;
+    }
+}
+
+/* =========================
+   IMAGE LOAD
+========================= */
+
+function loadImages(e){
+
+    const files = [...e.target.files];
+
+    preview.innerHTML = "";
+
+    state.images = [];
+
+    files.forEach(file=>{
+
+        const reader = new FileReader();
+
+        reader.onload = ev=>{
+
+            const img = new Image();
+
+            img.onload = ()=>{
+
+                state.images.push(img);
+
+                const p = document.createElement("img");
+                p.src = img.src;
+
+                preview.appendChild(p);
+
+                drawCanvas();
+            };
+
+            img.src = ev.target.result;
+        };
+
+        reader.readAsDataURL(file);
+    });
+}
+
+/* =========================
+   DRAW ENGINE
+========================= */
+function drawCanvas(){
+
+    /* =========================
+       CLEAR OLD FRAME
+    ========================= */
+
+    ctx.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+    /* =========================
+       DRAW BACKGROUND
+    ========================= */
+
+    ctx.fillStyle = state.bg;
+
+    ctx.fillRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+    /* =========================
+       GET CURRENT LAYOUT
+    ========================= */
+
+    const layoutData =
+        layouts[state.layout];
+
+    const cols =
+        layoutData.cols;
+
+    const rows =
+        layoutData.rows;
+
+    const layout =
+        layoutData.items;
+
+    /* =========================
+       GRID CALCULATION
+    ========================= */
+
+    const gap =
+        state.gap;
+
+    const totalGapX =
+        gap * (cols + 1);
+
+    const totalGapY =
+        gap * (rows + 1);
+
+    const cellW =
+        (canvas.width - totalGapX)
+        / cols;
+
+    const cellH =
+        (canvas.height - totalGapY)
+        / rows;
+
+    /* =========================
+       DRAW EACH IMAGE
+    ========================= */
+
+    layout.forEach((item,index)=>{
+
+        const img =
+            state.images[index];
+
+        if(!img) return;
+
+        /* GRID INFO */
+
+        const [
+            gx,
+            gy,
+            gw,
+            gh
+        ] = item;
+
+        /* CONVERT GRID TO PIXELS */
+
+        const x =
+            gap +
+            gx * (cellW + gap);
+
+        const y =
+            gap +
+            gy * (cellH + gap);
+
+        const w =
+            cellW * gw +
+            gap * (gw - 1);
+
+        const h =
+            cellH * gh +
+            gap * (gh - 1);
+
+        /* DRAW FRAME BACKGROUND */
+
+        ctx.fillStyle =
+            state.bg;
+
+        ctx.fillRect(
+            x,
+            y,
+            w,
+            h
+        );
+
+        /* DRAW IMAGE */
+
+        drawFitImage(
+            img,
+            x,
+            y,
+            w,
+            h,
+            state.fit
+        );
+    });
+
+    /* =========================
+       DRAW TEXTS
+    ========================= */
+
+    drawTexts();
+}
+/*
+function drawCanvas(){
+
+    ctx.clearRect(0,0,2000,2000);
+
+    ctx.fillStyle = state.bg;
+    ctx.fillRect(0,0,2000,2000);
+
+    const layout = layouts[state.layout];
+
+    let cols = 3;
+    let rows = 3;
+
+    if(state.layout==="2v"){
+        cols=2; rows=1;
+    }
+
+    if(state.layout==="2h"){
+        cols=1; rows=2;
+    }
+
+    if(state.layout==="vertical3"){
+        cols=1; rows=3;
+    }
+
+    if(state.layout==="stripe"){
+        cols=4; rows=1;
+    }
+
+    const gap = state.gap;
+
+    const cellW =
+        (2000 - gap*(cols+1)) / cols;
+
+    const cellH =
+        (2000 - gap*(rows+1)) / rows;
+
+    layout.forEach((item,index)=>{
+
+        const img = state.images[index];
+        if(!img) return;
+
+        const [gx,gy,gw,gh] = item;
+
+        const x =
+            gap + gx*(cellW+gap);
+
+        const y =
+            gap + gy*(cellH+gap);
+
+        const w =
+            cellW*gw + gap*(gw-1);
+
+        const h =
+            cellH*gh + gap*(gh-1);
+
+        ctx.fillStyle = state.bg;
+        ctx.fillRect(x,y,w,h);
+
+        drawFitImage(img,x,y,w,h,state.fit);
+    });
+
+    drawTexts();
+}
+*/
+/* =========================
+   CONTAIN/COVER ENGINE
+========================= */
+
+function drawFitImage(img,x,y,w,h,mode){
+
+    const iw = img.width;
+    const ih = img.height;
+
+    let scale;
+
+    if(mode==="contain"){
+        scale = Math.min(w/iw,h/ih);
+    }else{
+        scale = Math.max(w/iw,h/ih);
+    }
+
+    const nw = iw * scale;
+    const nh = ih * scale;
+
+    const nx = x + (w-nw)/2;
+    const ny = y + (h-nh)/2;
+
+    ctx.save();
+
+    ctx.beginPath();
+    ctx.rect(x,y,w,h);
+    ctx.clip();
+
+    ctx.drawImage(img,nx,ny,nw,nh);
+
+    ctx.restore();
+}
+
+/* =========================
+   TEXT SYSTEM
+========================= */
+
+function addText(){
+
+    const input =
+        document.getElementById("textInput");
+
+    const value =
+        input.value.trim();
+
+    if(!value) return;
+
+    const t = {
+
+        text:value,
+
+        x:300,
+        y:300,
+
+        size:40,
+
+        color:"#000000",
+
+        font:"Inter"
+    };
+
+    state.texts.push(t);
+
+    selectedText = t;
+
+    drawCanvas();
+}
+
+function drawSelectionBox(t){
+
+    ctx.save();
+
+    ctx.font =
+        `${t.size}px "${t.font}"`;
+
+    const w =
+        ctx.measureText(t.text).width;
+
+    const h =
+        t.size;
+
+    ctx.strokeStyle = "#00aaff";
+    ctx.lineWidth = 3;
+
+    ctx.setLineDash([10,6]);
+
+    ctx.strokeRect(
+        t.x - 10,
+        t.y - h - 10,
+        w + 20,
+        h + 20
+    );
+
+    ctx.restore();
+}
+
+function drawTexts(){
+
+    state.texts.forEach(t=>{
+
+        ctx.fillStyle = t.color;
+
+        ctx.font =
+            `${t.size}px "${t.font}"`;
+
+        ctx.fillText(
+            t.text,
+            t.x,
+            t.y
+        );
+
+        if(t === selectedText){
+            drawSelectionBox(t);
+        }
+    });
+}
+
+function setFont(v){
+
+    if(selectedText){
+        selectedText.font = v;
+        drawCanvas();
+    }
+}
+
+function setColor(v){
+
+    if(selectedText){
+        selectedText.color = v;
+        drawCanvas();
+    }
+}
+
+function setSize(v){
+
+    if(selectedText){
+        selectedText.size = parseInt(v);
+        drawCanvas();
+    }
+}
+
+function deleteText(){
+
+    if(!selectedText) return;
+
+    state.texts =
+        state.texts.filter(t=>t!==selectedText);
+
+    selectedText = null;
+
+    drawCanvas();
+}
+
+/* =========================
+   TEXT HIT DETECTION
+========================= */
+
+function getMousePos(e){
+
+    const rect =
+        canvas.getBoundingClientRect();
+
+    const scaleX =
+        canvas.width / rect.width;
+
+    const scaleY =
+        canvas.height / rect.height;
+
+    let clientX,clientY;
+
+    if(e.touches){
+
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+
+    }else{
+
+        clientX = e.clientX;
+        clientY = e.clientY;
+    }
+
+    return {
+
+        x:(clientX-rect.left)*scaleX,
+        y:(clientY-rect.top)*scaleY
+    };
+}
+
+function hitText(mx,my){
+
+    for(let i=state.texts.length-1;i>=0;i--){
+
+        const t = state.texts[i];
+
+        ctx.font =
+            `${t.size}px "${t.font}"`;
+
+        const w =
+            ctx.measureText(t.text).width;
+
+        const h = t.size;
+
+        if(
+            mx>=t.x &&
+            mx<=t.x+w &&
+            my>=t.y-h &&
+            my<=t.y
+        ){
+            return t;
+        }
+    }
+
+    return null;
+}
+
+/* =========================
+   DRAG SYSTEM
+========================= */
+
+canvas.addEventListener("mousedown",startDrag);
+canvas.addEventListener("touchstart",startDrag);
+
+function startDrag(e){
+
+    const p = getMousePos(e);
+
+    const t = hitText(p.x,p.y);
+
+    if(t){
+
+        draggingText = t;
+        selectedText = t;
+
+        dragDX = p.x - t.x;
+        dragDY = p.y - t.y;
+
+        drawCanvas();
+    }
+}
+
+canvas.addEventListener("mousemove",dragMove);
+canvas.addEventListener("touchmove",dragMove,{passive:false});
+
+function dragMove(e){
+
+    if(!draggingText) return;
+
+    e.preventDefault();
+
+    const p = getMousePos(e);
+
+    draggingText.x = p.x - dragDX;
+    draggingText.y = p.y - dragDY;
+
+    drawCanvas();
+}
+
+canvas.addEventListener("mouseup",endDrag);
+canvas.addEventListener("mouseleave",endDrag);
+canvas.addEventListener("touchend",endDrag);
+
+function endDrag(){
+    draggingText = null;
+}
+
+/* =========================
+   EXPORT
+========================= */
+
+function downloadImage(){
+
+    const oldSelected = selectedText;
+
+    selectedText = null;
+
+    drawCanvas();
+
+    canvas.toBlob(blob=>{
+
+        const url =
+            URL.createObjectURL(blob);
+
+        const a =
+            document.createElement("a");
+
+        a.href = url;
+        a.download = "collage.png";
+
+        a.click();
+
+        URL.revokeObjectURL(url);
+
+        selectedText = oldSelected;
+
+        drawCanvas();
+    });
+}
+
+/* =========================
+   STEP CONTROL
+========================= */
+
+function nextStep(){
+
+    if(step<4){
+        step++;
+        renderUI();
+    }
+}
+
+function prevStep(){
+
+    if(step>1){
+        step--;
+        renderUI();
+    }
+}
+
+renderUI();
+
+</script>
+
+</body>
+</html>
+

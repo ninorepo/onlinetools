@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initnpaial-scale=1.0"/>
+<title>Editanku.com Kompres Gambar Online Gratis</title>
+<meta name="description" content="Kompres gambar secara gratis tanpa aplikasi tanpa iklan." />
+  <meta name="robots" content="index, follow" />
+
+  <!-- ✅ Canonical -->
+  <link rel="canonical" href="https://editanku.com/kompres-gambar/" />
+
+  <!-- 🔵 Open Graph (SEO social share) -->
+  <meta property="og:title" content="Kompres Gambar Online Gratis" />
+  <meta property="og:description" content="Kompres Gambar secara online langsung dari browser kamu. Gratis tanpa iklan." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://editanku.com/kompres-gambar/" />
+
+<link rel="stylesheet" href="../asset/css/donate.css">
+<link rel="stylesheet" href="../asset/css/kompres-gambar.css">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-8DM83DZ4HZ"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-8DM83DZ4HZ');
+</script>
+
+</head>
+
+<body>
+	<header>
+		<h1>Kompres Gambar Online Gratis</h1>
+		<p>Kecilkan ukuran gambar tanpa mengurangi kualitas yang nampak. Gratis tanpa iklan, no ribet.</p>
+	</header>
+<div class="container">
+<div class="dropzone" id="dropzone">
+Klik / Drag &amp; Drop Image
+<input type="file" id="fileInput" multiple accept="image/*">
+</div>
+
+<!-- MODE SWITCH -->
+<div class="controls">
+  <label>
+    Mode
+    <select id="mode">
+      <option value="manual">Manual</option>
+      <option value="target">Target Size</option>
+    </select>
+  </label>
+
+  <label id="qualityBox">
+    Quality
+    <input type="range" id="quality" min="10" max="100" value="80">
+  </label>
+
+  <label id="dpiBox">
+    Scale
+    <select id="dpi">
+      <option value="1">100%</option>
+      <option value="0.75">75%</option>
+      <option value="0.5">50%</option>
+    </select>
+  </label>
+
+  <label id="targetBox" style="display:none;">
+    Target KB
+    <input type="number" id="target" value="200" min="10">
+  </label>
+</div>
+
+<div id="preview"></div>
+
+</div>
+<footer></footer>
+<!--include:donate.html-->
+
+<script src="../asset/js/include.js"></script>
+<script src="../asset/js/donate.js"></script>
+<script>
+const dropzone = document.getElementById("dropzone");
+const fileInput = document.getElementById("fileInput");
+const preview = document.getElementById("preview");
+
+const modeEl = document.getElementById("mode");
+const qualityEl = document.getElementById("quality");
+const dpiEl = document.getElementById("dpi");
+const targetEl = document.getElementById("target");
+
+const qualityBox = document.getElementById("qualityBox");
+const dpiBox = document.getElementById("dpiBox");
+const targetBox = document.getElementById("targetBox");
+
+let filesData = [];
+
+dropzone.onclick = () => fileInput.click();
+fileInput.onchange = e => handleFiles(e.target.files);
+
+dropzone.ondragover = e => e.preventDefault();
+dropzone.ondrop = e => {
+  e.preventDefault();
+  handleFiles(e.dataTransfer.files);
+};
+
+/* =========================
+   FORMAT DETECTION (AUTO)
+========================= */
+function getMime(type) {
+  if (type.includes("png")) return "image/png";
+  if (type.includes("webp")) return "image/webp";
+  if (type.includes("jpeg") || type.includes("jpg")) return "image/jpeg";
+
+  return "image/jpeg"; // fallback
+}
+
+function getExt(type) {
+  if (type.includes("png")) return "png";
+  if (type.includes("webp")) return "webp";
+  if (type.includes("jpeg") || type.includes("jpg")) return "jpg";
+
+  return "jpg";
+}
+
+/* =========================
+   FILE HANDLER
+========================= */
+function handleFiles(files) {
+  for (let f of files) {
+    if (!f.type.startsWith("image")) continue;
+
+    const r = new FileReader();
+    r.onload = e => {
+      filesData.push({
+        name: f.name,
+        type: f.type,
+        src: e.target.result,
+        file: f
+      });
+      render();
+    };
+    r.readAsDataURL(f);
+  }
+}
+
+/* =========================
+   COMPRESS CORE
+========================= */
+function compress(imgSrc, quality, scale, mime, cb) {
+  const img = new Image();
+  img.src = imgSrc;
+
+  img.onload = () => {
+    const canvas = document.createElement("canvas");
+    canvas.width = img.width * scale;
+    canvas.height = img.height * scale;
+
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    canvas.toBlob(blob => {
+      cb(URL.createObjectURL(blob), blob);
+    }, mime, quality);
+  };
+}
+
+/* =========================
+   TARGET SIZE MODE
+========================= */
+function compressTarget(imgSrc, targetKB, scale, mime, cb) {
+  const img = new Image();
+  img.src = imgSrc;
+
+  img.onload = () => {
+    let q = 0.9;
+
+    const run = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      canvas.toBlob(blob => {
+        const size = blob.size / 1024;
+
+        if (size > targetKB && q > 0.1) {
+          q -= 0.05;
+          run();
+        } else {
+          cb(URL.createObjectURL(blob), blob);
+        }
+      }, mime, q);
+    };
+
+    run();
+  };
+}
+
+/* =========================
+   RENDER PIPELINE
+========================= */
+function render() {
+  preview.innerHTML = "";
+
+  const mode = modeEl.value;
+  const scale = parseFloat(dpiEl.value);
+
+  filesData.forEach(item => {
+
+    const mime = getMime(item.type);
+    const ext = getExt(item.type);
+
+    const card = document.createElement("div");
+    card.className = "card";
+
+    card.innerHTML = `
+      <img src="${item.src}">
+      <div class="small">Original: ${(item.file.size/1024).toFixed(1)} KB</div>
+      <div class="status">Processing...</div>
+      <button>Download</button>
+    `;
+
+    preview.appendChild(card);
+
+    const status = card.querySelector(".status");
+    const btn = card.querySelector("button");
+
+    if (mode === "manual") {
+
+      const q = qualityEl.value / 100;
+
+      compress(item.src, q, scale, mime, (url, blob) => {
+        status.innerHTML = `Compressed: ${(blob.size/1024).toFixed(2)} KB`;
+
+        const name = "compressed_" + item.name.split(".")[0] + "." + ext;
+
+        btn.onclick = () => {
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = name;
+          a.click();
+        };
+      });
+
+    } else {
+
+      const target = parseFloat(targetEl.value);
+
+      compressTarget(item.src, target, scale, mime, (url, blob) => {
+        status.innerHTML = `Target: ${(blob.size/1024).toFixed(2)} KB`;
+
+        const name = "compressed_" + item.name.split(".")[0] + "." + ext;
+
+        btn.onclick = () => {
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = name;
+          a.click();
+        };
+      });
+    }
+  });
+}
+
+/* =========================
+   MODE SWITCH UI
+========================= */
+modeEl.onchange = () => {
+  if (modeEl.value === "manual") {
+    qualityBox.style.display = "block";
+    dpiBox.style.display = "block";
+    targetBox.style.display = "none";
+  } else {
+    qualityBox.style.display = "none";
+    dpiBox.style.display = "block";
+    targetBox.style.display = "block";
+  }
+
+  render();
+};
+
+qualityEl.oninput = render;
+dpiEl.onchange = render;
+targetEl.oninput = render;
+
+</script>
+</body>
+</html>
+
