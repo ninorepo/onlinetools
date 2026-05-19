@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>PDF Page Remover</title>
+
+<!-- PDF.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+<!-- PDF-LIB -->
+<script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: Arial, sans-serif;
+    }
+
+    body {
+        background: radial-gradient(circle at top, #1a1a1a, #0a0a0a);
+        color: #eaeaea;
+        min-height: 100vh;
+    }
+
+    header {
+        padding: 18px;
+        text-align: center;
+        font-size: 20px;
+        font-weight: bold;
+        background: rgba(255,255,255,0.03);
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .container {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        padding: 20px;
+        max-width: 1200px;
+        margin: auto;
+    }
+
+    .workspace {
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 12px;
+        padding: 15px;
+    }
+
+    .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+
+    input[type="file"] {
+        background: #111;
+        color: white;
+        padding: 8px;
+        border-radius: 8px;
+        border: 1px solid #333;
+    }
+
+    button {
+        padding: 10px 14px;
+        border: none;
+        border-radius: 8px;
+        background: #2d6cdf;
+        color: white;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+
+    button:hover {
+        background: #1f4fb8;
+    }
+
+    #counter {
+        font-size: 14px;
+        opacity: 0.8;
+        padding: 6px 10px;
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 6px;
+    }
+
+    .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 10px;
+    }
+
+    .page {
+        background: #111;
+        border: 2px solid transparent;
+        border-radius: 10px;
+        overflow: hidden;
+        cursor: pointer;
+        position: relative;
+        transition: 0.2s;
+    }
+
+    .page:hover {
+        transform: scale(1.03);
+    }
+
+    .page.selected {
+        border-color: #ff4d4d;
+        box-shadow: 0 0 0 2px rgba(255,77,77,0.25);
+    }
+
+    .page.selected::after {
+        content: "REMOVE";
+        position: absolute;
+        top: 6px;
+        left: 6px;
+        font-size: 10px;
+        background: #ff4d4d;
+        padding: 2px 5px;
+        border-radius: 4px;
+        color: white;
+    }
+
+    .page canvas {
+        width: 100%;
+        height: auto;
+        display: block;
+    }
+
+    .page span {
+        position: absolute;
+        bottom: 5px;
+        right: 8px;
+        font-size: 12px;
+        background: rgba(0,0,0,0.6);
+        padding: 2px 5px;
+        border-radius: 4px;
+    }
+
+    .article {
+        background: rgba(255,255,255,0.02);
+        border: 1px solid rgba(255,255,255,0.08);
+        padding: 15px;
+        border-radius: 12px;
+        line-height: 1.6;
+        font-size: 14px;
+    }
+
+    button.loading {
+    	opacity: 0.7;
+    	cursor: not-allowed;
+    }
+
+
+    @media (max-width: 600px) {
+        header {
+            font-size: 16px;
+        }
+
+        button {
+            width: 100%;
+        }
+    }
+</style>
+</head>
+
+<body>
+
+<header>
+    PDF Page Remover Tool
+</header>
+
+<div class="container">
+
+    <div class="workspace">
+
+        <div class="controls">
+            <input type="file" id="fileInput" accept="application/pdf"/>
+            <button id="downloadBtn" onclick="downloadPDF()">Download Modified PDF</button>
+            <button onclick="clearSelection()">Clear Selection</button>
+            <span id="counter">Selected: 0</span>
+        </div>
+
+        <div class="grid" id="pdfGrid"></div>
+    </div>
+
+    <div class="article">
+        <h3>How it works</h3>
+        <p>
+            Upload a PDF file to preview all pages as thumbnails.
+            Click any page to mark it for removal (it will NOT be deleted immediately).
+            After selecting pages, click “Download Modified PDF” to export the result.
+        </p>
+    </div>
+
+</div>
+
+<script>
+const fileInput = document.getElementById("fileInput");
+const grid = document.getElementById("pdfGrid");
+const counter = document.getElementById("counter");
+
+let pdfDoc = null;
+let selectedPages = new Set();
+let originalBytes = null;
+
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+function updateCounter() {
+    counter.textContent = `Selected: ${selectedPages.size}`;
+}
+
+ fileInput.addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    selectedPages.clear();
+    updateCounter();
+    grid.innerHTML = "";
+   
+    // 1. Read the file into a variable
+    const buffer = await file.arrayBuffer();
+    
+    // 2. FIX: Correct the syntax constructor to Uint8Array
+    originalBytes = new Uint8Array(buffer);
+    
+    // 3. FIX: Pass a slice/copy to PDF.js so it never touches your originalBytes data
+    const pdfjsData = originalBytes.slice(0);
+    const loadingTask = pdfjsLib.getDocument({ data: pdfjsData });
+    pdfDoc = await loadingTask.promise;
+
+    for (let i = 1; i <= pdfDoc.numPages; i++) {
+        const page = await pdfDoc.getPage(i);
+        const viewport = page.getViewport({ scale: 0.4 });
+
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+
+        await page.render({ canvasContext: ctx, viewport }).promise;
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "page";
+        const index = i - 1;
+        wrapper.dataset.index = index;
+
+        const label = document.createElement("span");
+        label.textContent = i;
+
+        wrapper.appendChild(canvas);
+        wrapper.appendChild(label);
+
+        wrapper.addEventListener("click", () => {
+            if (selectedPages.has(index)) {
+                selectedPages.delete(index);
+                wrapper.classList.remove("selected");
+            } else {
+                selectedPages.add(index);
+                wrapper.classList.add("selected");
+            }
+            updateCounter();
+        });
+
+        grid.appendChild(wrapper);
+    }
+});
+
+async function downloadPDF() {
+    // Check if originalBytes exists and has actual data lengths
+    if (!originalBytes || originalBytes.length === 0) {
+        alert("Upload a PDF first!");
+        return;
+    }
+
+    const btn = document.getElementById("downloadBtn");
+
+    try {
+        btn.disabled = true;
+        btn.textContent = "Preparing...";
+
+        const { PDFDocument } = PDFLib;
+
+        // FIX: Extract the raw underlying buffer from the Uint8Array safely
+        const rawBuffer = originalBytes.buffer.slice(
+            originalBytes.byteOffset,
+            originalBytes.byteOffset + originalBytes.byteLength
+        );
+
+        // Load the safe copy of the document
+        const finalPdf = await PDFDocument.load(rawBuffer, {
+            ignoreEncryption: true
+        });
+
+        const totalPages = finalPdf.getPageCount();
+        const removeSet = selectedPages;
+
+        // Loop backward to cleanly drop removed pages
+        for (let i = totalPages - 1; i >= 0; i--) {
+            const percent = Math.round(((totalPages - i) / totalPages) * 100);
+            btn.textContent = `Processing ${percent}%`;
+
+            if (removeSet.has(i)) {
+                finalPdf.removePage(i);
+            }
+        }
+
+        btn.textContent = "Saving...";
+
+        // Save the resulting layout
+        const pdfBytes = await finalPdf.save();
+
+        // FIX: Build blob directly using the compiled raw bytes array
+        const blob = new Blob([pdfBytes], { type: "application/pdf" });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "modified.pdf";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+
+        URL.revokeObjectURL(url);
+        btn.textContent = "Download PDF";
+
+    } catch (err) {
+        console.error("FULL ERROR:", err);
+        alert("PDF failed: " + (err?.message || err));
+        btn.textContent = "Download PDF";
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+function clearSelection() {
+    selectedPages.clear();
+    document.querySelectorAll(".page").forEach(p => {
+        p.classList.remove("selected");
+    });
+    updateCounter();
+}
+</script>
+
+</body>
+</html>
+
