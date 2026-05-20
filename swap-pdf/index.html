@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>PDF Page Swapper</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+
+<style>
+    * { box-sizing: border-box; margin:0; padding:0; font-family: system-ui; }
+
+    body {
+        min-height: 100vh;
+        color: #eaeaea;
+        background: radial-gradient(circle at top, #1a1a1a, #0b0b0b 70%);
+        display: flex;
+        flex-direction: column;
+    }
+
+    header {
+        padding: 18px;
+        text-align: center;
+        font-size: 20px;
+        font-weight: 600;
+        border-bottom: 1px solid #222;
+    }
+
+    .wordspace {
+        padding: 10px;
+        text-align: center;
+        font-size: 13px;
+        color: #aaa;
+    }
+
+    .article {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 20px;
+        gap: 15px;
+    }
+
+    .upload-area {
+        width: 100%;
+        max-width: 700px;
+        padding: 30px;
+        border: 2px dashed #333;
+        border-radius: 12px;
+        text-align: center;
+        cursor: pointer;
+        color: #888;
+        transition: 0.2s;
+    }
+
+    .upload-area:hover {
+        border-color: #666;
+        color: #ccc;
+    }
+
+    .grid {
+        width: 100%;
+        max-width: 1000px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 10px;
+    }
+
+    .page {
+        border: 2px solid #222;
+        border-radius: 8px;
+        overflow: hidden;
+        cursor: pointer;
+        transition: 0.2s;
+        background: #111;
+    }
+
+    .page.selected {
+        border-color: #4caf50;
+        transform: scale(1.03);
+    }
+
+    .page img {
+        width: 100%;
+        display: block;
+    }
+
+    .footer {
+        padding: 15px;
+        display: flex;
+        justify-content: center;
+        border-top: 1px solid #222;
+    }
+
+    .download-btn {
+        padding: 10px 18px;
+        background: #4caf50;
+        border: none;
+        border-radius: 8px;
+        color: #fff;
+        cursor: pointer;
+        font-weight: 600;
+    }
+
+    .download-btn:hover {
+        background: #3fa043;
+    }
+
+    input[type="file"] {
+        display: none;
+    }
+</style>
+</head>
+
+<body>
+
+<header>PDF Page Swapper</header>
+<div class="wordspace">Upload → Click pages to swap → Download</div>
+
+<div class="article">
+
+    <div class="upload-area" id="uploadBox">
+        Click or Drop PDF Here
+        <input type="file" id="fileInput" accept="application/pdf">
+    </div>
+
+    <div class="grid" id="grid"></div>
+
+</div>
+
+<div class="footer">
+    <button class="download-btn" id="downloadBtn">Download</button>
+</div>
+<script>
+const uploadBox = document.getElementById("uploadBox");
+const fileInput = document.getElementById("fileInput");
+const grid = document.getElementById("grid");
+const downloadBtn = document.getElementById("downloadBtn");
+
+let pdfDoc = null;
+let pages = [];   // {img, originalIndex}
+let selected = null;
+
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+uploadBox.onclick = () => fileInput.click();
+
+fileInput.onchange = e => {
+    const file = e.target.files[0];
+    if (file) loadPDF(file);
+};
+
+async function loadPDF(file) {
+    const buffer = await file.arrayBuffer();
+    pdfDoc = await pdfjsLib.getDocument({ data: buffer }).promise;
+
+    pages = [];
+    grid.innerHTML = "";
+
+    for (let i = 0; i < pdfDoc.numPages; i++) {
+        const page = await pdfDoc.getPage(i + 1);
+        const viewport = page.getViewport({ scale: 0.6 });
+
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+
+        await page.render({ canvasContext: ctx, viewport }).promise;
+
+        pages.push({
+            img: canvas.toDataURL("image/png"),
+            originalIndex: i
+        });
+    }
+
+    renderGrid();
+}
+
+function renderGrid() {
+    grid.innerHTML = "";
+
+    pages.forEach((p, i) => {
+        const div = document.createElement("div");
+        div.className = "page";
+        div.dataset.id = i;
+
+        const img = document.createElement("img");
+        img.src = p.img;
+
+        div.appendChild(img);
+
+        div.onclick = () => handleSelect(i);
+
+        grid.appendChild(div);
+    });
+}
+
+// ✔ SAFE SWAP (array only, DOM fully rebuilt after)
+function handleSelect(i) {
+    const items = grid.children;
+
+    if (selected === null) {
+        selected = i;
+        items[i].classList.add("selected");
+        return;
+    }
+
+    if (selected !== i) {
+        // swap array ONLY
+        [pages[selected], pages[i]] = [pages[i], pages[selected]];
+    }
+
+    // reset selection
+    items[selected].classList.remove("selected");
+    selected = null;
+
+    // rebuild DOM in correct order (cheap, safe, no PDF rerender)
+    renderGrid();
+}
+
+downloadBtn.onclick = async () => {
+    if (!pdfDoc) return;
+
+    const { PDFDocument } = PDFLib;
+
+    const originalBytes = await fileInput.files[0].arrayBuffer();
+    const srcPdf = await PDFDocument.load(originalBytes);
+
+    const newPdf = await PDFDocument.create();
+
+    const copiedPages = await newPdf.copyPages(
+        srcPdf,
+        srcPdf.getPageIndices()
+    );
+
+    // order follows CURRENT array order
+    pages.forEach(p => {
+        newPdf.addPage(copiedPages[p.originalIndex]);
+    });
+
+    const bytes = await newPdf.save();
+
+    const blob = new Blob([bytes], { type: "application/pdf" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "modified.pdf";
+    a.click();
+};
+</script>
+
+</body>
+</html>
+
