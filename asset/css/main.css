@@ -154,6 +154,14 @@ header p {
 	color: #a78bfa;
 }
 
+#swap-pdf-icon {
+	color: #facc15;
+}
+
+#hapus-halaman-pdf-icon {
+	color: #22d3ee;
+}
+
 /* floating animations */
 @keyframes floatIdle {
   0%   { transform: translateY(0px); }
