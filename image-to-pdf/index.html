@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Image to PDF Converter</title>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-8DM83DZ4HZ"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-8DM83DZ4HZ');
+</script>
+
+
+<link rel="stylesheet" href="../asset/css/donate.css">
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background: #0f1115;
+        color: #e6e6e6;
+	width:100%;
+	overflow: hidden;
+    }
+
+    .container {
+        max-width: 900px;
+        margin: auto;
+        padding: 16px;
+    }
+
+    h1 {
+        font-size: 20px;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .card {
+        background: #171a21;
+        padding: 16px;
+        border-radius: 12px;
+        margin-bottom: 12px;
+    }
+
+    input[type="file"],
+    select,
+    input[type="number"] {
+        width: 100%;
+        padding: 10px;
+        margin-top: 8px;
+        background: #222733;
+        color: white;
+        border: 1px solid #333;
+        border-radius: 8px;
+    }
+
+    button {
+        width: 100%;
+        padding: 10px;
+        margin-top: 10px;
+        border-radius: 8px;
+        border: none;
+        font-size: 14px;
+        background: #4f7cff;
+        color: white;
+        cursor: pointer;
+    }
+
+    button:disabled {
+        background: #2c3550;
+    }
+
+    .progress {
+        margin-top: 10px;
+        height: 10px;
+        background: #2c2f3a;
+        border-radius: 6px;
+        overflow: hidden;
+    }
+
+    .bar {
+        height: 100%;
+        width: 0%;
+        background: #4f7cff;
+        transition: width 0.2s;
+    }
+
+    .status {
+        margin-top: 8px;
+        font-size: 13px;
+        opacity: 0.8;
+    }
+
+    .preview {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+        gap: 8px;
+        margin-top: 10px;
+    }
+
+    .preview img {
+        width: 100%;
+        border-radius: 6px;
+        border: 1px solid #333;
+    }
+
+    .row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+</style>
+</head>
+
+<body>
+
+<div class="container">
+    <h1>Image → PDF Converter</h1>
+
+    <div class="card">
+        <input type="file" id="images" multiple accept="image/*">
+
+        <div class="row">
+            <select id="mode">
+                <option value="single">One image per page</option>
+                <option value="multi">Multiple images per page</option>
+            </select>
+
+            <select id="pageSize">
+                <option value="a3">A3 (297 × 420 mm)</option>
+                <option value="a4" selected>A4 (210 × 297 mm)</option>
+                <option value="a5">A5 (148 × 210 mm)</option>
+                <option value="letter">Letter (216 × 279 mm)</option>
+                <option value="legal">Legal (216 × 356 mm)</option>
+                <option value="square">Square (210 × 210 mm)</option>
+                <option value="custom">Custom</option>
+            </select>
+        </div>
+
+        <div class="row">
+            <input type="number" id="margin" placeholder="Margin (mm)" value="10" min="0" max="50">
+        </div>
+
+        <div class="row">
+            <input type="number" id="customW" placeholder="Custom width (mm)" value="210">
+            <input type="number" id="customH" placeholder="Custom height (mm)" value="297">
+        </div>
+
+        <button onclick="generatePDF()">Generate PDF</button>
+
+        <div class="progress">
+            <div class="bar" id="bar"></div>
+        </div>
+
+        <div class="status" id="status">Waiting...</div>
+
+        <button id="downloadBtn" style="display:none;">Download PDF</button>
+    </div>
+
+    <div class="card">
+        <h3 style="margin:0 0 10px 0;">Preview</h3>
+        <div class="preview" id="preview"></div>
+    </div>
+</div>
+<!--include:donate.html-->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="../asset/js/include.js"></script>
+<script src="../asset/js/donate.js"></script>
+<script>
+let pdfBlob = null;
+
+const fileInput = document.getElementById("images");
+const preview = document.getElementById("preview");
+const status = document.getElementById("status");
+const bar = document.getElementById("bar");
+const downloadBtn = document.getElementById("downloadBtn");
+
+fileInput.addEventListener("change", () => {
+    preview.innerHTML = "";
+    [...fileInput.files].forEach(file => {
+        const img = document.createElement("img");
+        img.src = URL.createObjectURL(file);
+        preview.appendChild(img);
+    });
+});
+
+function loadImage(file) {
+    return new Promise(resolve => {
+        const img = new Image();
+        img.src = URL.createObjectURL(file);
+        img.onload = () => resolve(img);
+    });
+}
+
+function getPageSize(size) {
+    switch (size) {
+        case "a3": return [297, 420];
+        case "a4": return [210, 297];
+        case "a5": return [148, 210];
+        case "letter": return [216, 279];
+        case "legal": return [216, 356];
+        case "square": return [210, 210];
+        case "custom":
+            return [
+                parseFloat(document.getElementById("customW").value || 210),
+                parseFloat(document.getElementById("customH").value || 297)
+            ];
+        default:
+            return [210, 297];
+    }
+}
+
+async function generatePDF() {
+    const { jsPDF } = window.jspdf;
+    const files = [...fileInput.files];
+
+    if (files.length === 0) {
+        alert("Please select images");
+        return;
+    }
+
+    downloadBtn.style.display = "none";
+    status.innerText = "Loading images...";
+    bar.style.width = "0%";
+
+    const mode = document.getElementById("mode").value;
+    const pageSize = document.getElementById("pageSize").value;
+    const margin = parseInt(document.getElementById("margin").value || "10");
+
+    const pdf = new jsPDF({
+        unit: "mm",
+        format: getPageSize(pageSize)
+    });
+
+    const [pageW, pageH] = getPageSize(pageSize);
+
+    let progress = 0;
+
+    // ================= SINGLE MODE =================
+    if (mode === "single") {
+        for (let i = 0; i < files.length; i++) {
+            const img = await loadImage(files[i]);
+
+            if (i !== 0) pdf.addPage();
+
+            const maxW = pageW - margin * 2;
+            const maxH = pageH - margin * 2;
+
+            const ratio = Math.min(maxW / img.width, maxH / img.height);
+
+            const w = img.width * ratio;
+            const h = img.height * ratio;
+
+            const x = (pageW - w) / 2;
+            const y = (pageH - h) / 2;
+
+            pdf.addImage(img, "JPEG", x, y, w, h);
+
+            progress = ((i + 1) / files.length) * 100;
+            bar.style.width = progress + "%";
+            status.innerText = `Processing ${i + 1}/${files.length}`;
+        }
+    }
+
+    // ================= GRID MODE =================
+    if (mode === "multi") {
+        const cols = 2;
+        const rows = 3;
+
+        const cellW = (pageW - margin * 2) / cols;
+        const cellH = (pageH - margin * 2) / rows;
+
+        let xIndex = 0;
+        let yIndex = 0;
+
+        for (let i = 0; i < files.length; i++) {
+            const img = await loadImage(files[i]);
+
+            if (i % (cols * rows) === 0 && i !== 0) {
+                pdf.addPage();
+                xIndex = 0;
+                yIndex = 0;
+            }
+
+            const ratio = Math.min(cellW / img.width, cellH / img.height);
+
+            const w = img.width * ratio;
+            const h = img.height * ratio;
+
+            const x = margin + xIndex * cellW + (cellW - w) / 2;
+            const y = margin + yIndex * cellH + (cellH - h) / 2;
+
+            pdf.addImage(img, "JPEG", x, y, w, h);
+
+            xIndex++;
+            if (xIndex >= cols) {
+                xIndex = 0;
+                yIndex++;
+            }
+
+            progress = ((i + 1) / files.length) * 100;
+            bar.style.width = progress + "%";
+            status.innerText = `Processing ${i + 1}/${files.length}`;
+        }
+    }
+
+    status.innerText = "Finalizing PDF...";
+
+    pdfBlob = pdf.output("blob");
+
+    downloadBtn.style.display = "block";
+    status.innerText = "Done!";
+}
+
+downloadBtn.addEventListener("click", () => {
+    const url = URL.createObjectURL(pdfBlob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "images.pdf";
+    a.click();
+});
+</script>
+
+</body>
+</html>
+
