@@ -20,14 +20,9 @@
         font-family: Arial, sans-serif;
         background: #0f1115;
         color: #e6e6e6;
-	width:100%;
+	width: auto;
 	overflow: hidden;
-    }
-
-    .container {
-        max-width: 900px;
-        margin: auto;
-        padding: 16px;
+    	padding: 0px;
     }
 
     h1 {
@@ -43,10 +38,18 @@
         margin-bottom: 12px;
     }
 
+    label {
+	display: block;
+	text-align:center;
+    	margin-top: 10px;
+    }
+
     input[type="file"],
     select,
     input[type="number"] {
-        width: 100%;
+        display: block;
+	width: 50%;
+	margin: 0 auto;
         padding: 10px;
         margin-top: 8px;
         background: #222733;
@@ -56,8 +59,8 @@
     }
 
     button {
-        width: 100%;
         padding: 10px;
+	margin: auto;
         margin-top: 10px;
         border-radius: 8px;
         border: none;
@@ -104,12 +107,6 @@
         border-radius: 6px;
         border: 1px solid #333;
     }
-
-    .row {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-    }
 </style>
 </head>
 
@@ -120,13 +117,12 @@
 
     <div class="card">
         <input type="file" id="images" multiple accept="image/*">
-
         <div class="row">
             <select id="mode">
                 <option value="single">One image per page</option>
                 <option value="multi">Multiple images per page</option>
             </select>
-
+	    <label>Ukuran Kertas</label>
             <select id="pageSize">
                 <option value="a3">A3 (297 × 420 mm)</option>
                 <option value="a4" selected>A4 (210 × 297 mm)</option>
@@ -137,14 +133,17 @@
                 <option value="custom">Custom</option>
             </select>
         </div>
-
+	
         <div class="row">
-            <input type="number" id="margin" placeholder="Margin (mm)" value="10" min="0" max="50">
+            	<label>Margin (mm)</label>
+		<input type="number" id="margin" placeholder="Margin (mm)" value="10" min="0" max="50">
         </div>
 
         <div class="row">
+	    <label>Lebar Kertas (custom/mm)</label>
             <input type="number" id="customW" placeholder="Custom width (mm)" value="210">
-            <input type="number" id="customH" placeholder="Custom height (mm)" value="297">
+	    <label>Tinggi Kertas (custom/mm)</label>
+	    <input type="number" id="customH" placeholder="Custom height (mm)" value="297">
         </div>
 
         <button onclick="generatePDF()">Generate PDF</button>
