@@ -159,7 +159,12 @@ header p {
 }
 
 #hapus-halaman-pdf-icon {
-	color: #22d3ee;
+	color: grey;
+}
+
+.icon-combine i {
+	font-size: 30px !important;
+	color: #f1ff58;
 }
 
 /* floating animations */
